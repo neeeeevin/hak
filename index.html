@@ -17,8 +17,8 @@
   html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
   body{
     background: radial-gradient(1200px 600px at 10% 10%, rgba(124,58,237,0.10), transparent 10%),
-                radial-gradient(800px 400px at 90% 90%, rgba(16,185,129,0.06), transparent 10%),
-                var(--bg);
+              radial-gradient(800px 400px at 90% 90%, rgba(16,185,129,0.06), transparent 10%),
+              var(--bg);
     color:#e6eef8; display:flex; align-items:center; justify-content:center;
     padding:20px;
   }
@@ -180,10 +180,8 @@
 <script>
 /*
   Orientation-first app main JS
-  - Screen Orientation API preferred
-  - Fallback to window.orientation (legacy)
-  - deviceorientation as last-resort fallback (best-effort; iOS permission-needed)
-  - Map to four cases: upright, upside-down, landscape-right, landscape-left
+  - This version uses a debounced deviceorientation listener for stability.
+  - It avoids fast, twitchy switching on minor phone shakes.
 */
 
 /* ---------- Configuration ---------- */
@@ -241,17 +239,17 @@ let timerInterval=null, timerEndTs=null; // timer
 
 /* ---------- Utility: show/hide features ---------- */
 function showFeatureFor(orientation) {
+  if (!orientation) return;
   currentOrientation = orientation;
   orientationLabel.textContent = orientation;
   orientationIndicator.textContent = orientation;
-  // hide all, then show the right one with animation
+  
   Object.values(orientationEls).forEach(el => { el.classList.remove('active'); el.setAttribute('aria-hidden', 'true'); });
   const el = orientationEls[orientation];
   if(el){
     el.classList.add('active');
     el.setAttribute('aria-hidden', 'false');
   }
-  // optional haptic feedback
   if (navigator.vibrate) navigator.vibrate(30);
 }
 
@@ -268,7 +266,6 @@ updateClockDisplay();
 setAlarmBtn.addEventListener('click', () => {
   const v = alarmInput.value;
   if(!v){ alert('Pick a time'); return; }
-  // Browser time input returns "HH:MM", convert to HH:MM:SS assumed 00
   alarmTimeStr = v.length===5 ? `${v}:00` : v;
   localStorage.setItem('pt_alarm_time', alarmTimeStr);
   savedAlarmElem.textContent = alarmTimeStr;
@@ -281,22 +278,18 @@ clearAlarmBtn.addEventListener('click', () => {
   flashUI('Alarm cleared');
 });
 
-/* Check alarm every second */
 setInterval(() => {
   if(!alarmTimeStr) return;
   const now = formatTime(new Date());
   if(now === alarmTimeStr){
-    // ring! play sound, vibrate, show big visual
     triggerAlarm();
-    // to avoid repeating every second, clear saved alarm (optional)
-    // localStorage.removeItem('pt_alarm_time'); alarmTimeStr=null; savedAlarmElem.textContent='—';
   }
 }, 1000);
 
 function triggerAlarm(){
   flashScreen('Alarm!', 2200);
   if(alarmSound){
-    try{ alarmSound.play(); } catch(e){ /* may require user interaction */ }
+    try{ alarmSound.play(); } catch(e){}
   }
   if(navigator.vibrate) navigator.vibrate([200,80,150]);
 }
@@ -384,7 +377,6 @@ async function fetchWeatherByCoords(lat, lon) {
   }
 }
 refreshWeather.addEventListener('click', () => {
-  // if we have cached coords ask to use them, else ask for location
   if(localStorage.getItem('pt_coords')){
     const {lat, lon} = JSON.parse(localStorage.getItem('pt_coords'));
     fetchWeatherByCoords(lat, lon);
@@ -405,182 +397,83 @@ function fetchLocationAndWeather(){
   }, {enableHighAccuracy:false, timeout:8000});
 }
 
-/* ---------- Helpful small UI helpers ---------- */
+/* ---------- UI helpers ---------- */
 function flashUI(text){
   const prev = document.getElementById('tempToast');
   if(prev) prev.remove();
   const t = document.createElement('div');
   t.id='tempToast';
-  t.style.position='absolute'; t.style.left='50%'; t.style.top='12%'; t.style.transform='translateX(-50%)';
-  t.style.background='linear-gradient(90deg,var(--accent),#06b6d4)'; t.style.color='#042226'; t.style.padding='10px 16px';
-  t.style.borderRadius='10px'; t.style.fontWeight=700; t.style.boxShadow='0 8px 30px rgba(2,6,23,0.6)';
+  t.style.cssText = 'position:absolute; left:50%; top:12%; transform:translateX(-50%); background:linear-gradient(90deg,var(--accent),#06b6d4); color:#042226; padding:10px 16px; border-radius:10px; font-weight:700; box-shadow:0 8px 30px rgba(2,6,23,0.6);';
   t.innerText = text;
   stage.appendChild(t);
   setTimeout(()=> t.remove(), 1700);
 }
 function flashScreen(text, ms=1500){
   const overlay = document.createElement('div');
-  overlay.style.position='absolute'; overlay.style.inset=0; overlay.style.display='flex'; overlay.style.alignItems='center'; overlay.style.justifyContent='center';
-  overlay.style.background='linear-gradient(180deg, rgba(124,58,237,0.18), rgba(6,182,212,0.12))'; overlay.style.color='#fff';
-  overlay.style.fontSize='28px'; overlay.style.fontWeight=800; overlay.style.zIndex=50;
+  overlay.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg, rgba(124,58,237,0.18), rgba(6,182,212,0.12)); color:#fff; font-size:28px; font-weight:800; z-index:50;';
   overlay.innerText = text;
   stage.appendChild(overlay);
   setTimeout(()=> overlay.remove(), ms);
 }
 
-/* ---------- Orientation detection: robust hybrid ---------- */
+/* ---------- NEW: STABLE ORIENTATION LOGIC ---------- */
+let orientationTimeout = null;
+const DEBOUNCE_DELAY = 400; // 400ms delay. Increase if still too sensitive.
 
-/*
-  Strategy:
-  1) Try Screen.orientation.type (best).
-  2) Else fallback to window.orientation (legacy angle) via orientationchange.
-  3) Else as last resort, use deviceorientation (beta/gamma) — best-effort and prompts for iOS permission.
-  4) Also listen to resize as an additional signal.
-*/
-
-function mapOrientationFromType(otype){
-  if(!otype) return null;
-  otype = otype.toLowerCase();
-  if(otype.includes('portrait-primary')) return 'upright';
-  if(otype.includes('portrait-secondary')) return 'upside-down';
-  if(otype.includes('landscape-primary')) return 'landscape-right';
-  if(otype.includes('landscape-secondary')) return 'landscape-left';
-  // some browsers return 'portrait' or 'landscape' only:
-  if(otype === 'portrait') return (window.innerHeight > window.innerWidth) ? 'upright' : 'upright';
-  if(otype === 'landscape') return (window.innerWidth > window.innerHeight) ? 'landscape-right' : 'landscape-right';
-  return null;
-}
-function mapOrientationFromAngle(angle){
-  // window.orientation values: 0, 90, -90, 180 (and sometimes 270)
-  angle = Number(angle);
-  angle = ((angle % 360) + 360) % 360; // normalize 0..359
-  if(angle === 0) return 'upright';
-  if(angle === 180) return 'upside-down';
-  if(angle === 90) return 'landscape-right'; // device rotated clockwise
-  if(angle === 270) return 'landscape-left';
-  return null;
-}
-
-/* Deviceorientation fallback: we read beta (tilt front-back, -180..180) and gamma (left-right, -90..90)
-   This mapping is approximate and used only when other APIs unavailable.
-   Heuristics:
-     - portrait upright: |gamma| < ~30 and |beta| < ~60 and screen taller than wide
-     - portrait upside-down: |gamma| < ~30 and |beta| > ~120 (or < -120) ? or reversed sign
-     - landscape-right: gamma > ~30
-     - landscape-left: gamma < -30
-   Note: deviceorientation varies per device; this is best-effort.
-*/
-let deviceOrSupported = false;
 function deviceOrientationHandler(e){
-  deviceOrSupported = true;
-  const beta = e.beta; // -180 .. 180 (front-back tilt)
-  const gamma = e.gamma; // -90 .. 90 (left-right tilt)
-  // use gamma to pick left/right landscape
-  if(gamma > 30) { setOrientationIfChanged('landscape-right'); return; }
-  if(gamma < -30) { setOrientationIfChanged('landscape-left'); return; }
-  // if near vertical and phone taller than wide, decide portrait upright/upside-down via beta
-  if(Math.abs(gamma) <= 30){
-    if(beta > 100 || beta < -100){ setOrientationIfChanged('upside-down'); return; }
-    setOrientationIfChanged('upright'); return;
-  }
-}
+    clearTimeout(orientationTimeout);
 
-/* central setter w/ debounce */
-let lastOrientationSet = null;
-function setOrientationIfChanged(o){
-  if(o === lastOrientationSet) return;
-  lastOrientationSet = o;
-  showFeatureFor(o);
-}
+    orientationTimeout = setTimeout(() => {
+        const beta = e.beta; // front-back tilt
+        const gamma = e.gamma; // left-right tilt
+        let newOrientation = null;
 
-/* main detection sequence */
-async function detectOrientationInit(){
-  // 1) Screen Orientation API
-  if(screen.orientation && screen.orientation.type){
-    const o = mapOrientationFromType(screen.orientation.type);
-    if(o) setOrientationIfChanged(o);
-    screen.orientation.addEventListener('change', () => {
-      const o2 = mapOrientationFromType(screen.orientation.type);
-      if(o2) setOrientationIfChanged(o2);
-    });
-  }
+        const landscapeThreshold = 45;
+        const portraitThreshold = 45;
 
-  // 2) legacy window.orientation / orientationchange
-  window.addEventListener('orientationchange', () => {
-    const ang = (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (typeof window.orientation === 'number' ? window.orientation : null);
-    const mapped = mapOrientationFromAngle(ang);
-    if(mapped) setOrientationIfChanged(mapped);
-  });
-
-  // 3) resize fallback (some browsers only change innerWidth/innerHeight)
-  window.addEventListener('resize', () => {
-    // prefer other APIs, but as fallback: decide by innerWidth/innerHeight and preserve last left/right via angle if available
-    const isPortrait = window.innerHeight > window.innerWidth;
-    if(isPortrait){
-      // decide upright vs upside-down using previous angle if available
-      const ang = (typeof window.orientation === 'number') ? mapOrientationFromAngle(window.orientation) : null;
-      setOrientationIfChanged(ang || 'upright');
-    } else {
-      // prefer previous left/right
-      const ang = (typeof window.orientation === 'number') ? mapOrientationFromAngle(window.orientation) : null;
-      setOrientationIfChanged(ang || 'landscape-right');
-    }
-  });
-
-  // 4) deviceorientation best-effort (ask permission on iOS)
-  if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
-    // iOS 13+ requires user gesture to request permission. We'll prompt the user via an inline dialog if needed.
-    // For hackathon rapid demo, ask permission on first touch.
-    document.addEventListener('touchstart', async function iosDevicePermission(){
-      try{
-        const perm = await DeviceOrientationEvent.requestPermission();
-        if(perm === 'granted'){
-          window.addEventListener('deviceorientation', deviceOrientationHandler);
+        if (gamma > landscapeThreshold) {
+            newOrientation = 'landscape-right';
+        } else if (gamma < -landscapeThreshold) {
+            newOrientation = 'landscape-left';
+        } else if (beta > portraitThreshold && beta < 135) {
+            newOrientation = 'upright';
+        } else if (beta < -portraitThreshold && beta > -135) {
+            newOrientation = 'upside-down';
         }
-      }catch(e){ console.log('device orientation perm err', e); }
-      document.removeEventListener('touchstart', iosDevicePermission);
-    }, {once:true});
-  } else if(window.DeviceOrientationEvent){
-    window.addEventListener('deviceorientation', deviceOrientationHandler);
-  }
 
-  // initial attempt using screen.orientation or window.orientation
-  const initialAngle = (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (typeof window.orientation === 'number' ? window.orientation : null);
-  let initial = null;
-  if(initialAngle !== null){
-    initial = mapOrientationFromAngle(initialAngle);
-  } else if(screen.orientation && screen.orientation.type){
-    initial = mapOrientationFromType(screen.orientation.type);
-  } else {
-    // fallback using screen dimensions
-    initial = window.innerHeight>window.innerWidth ? 'upright' : 'landscape-right';
-  }
-  setOrientationIfChanged(initial);
+        if (newOrientation && newOrientation !== currentOrientation) {
+            showFeatureFor(newOrientation);
+        }
+    }, DEBOUNCE_DELAY);
 }
 
 /* ---------- Boot ---------- */
-detectOrientationInit();
+async function initialize() {
+    // Default view
+    showFeatureFor('upright');
 
-/* ---------- Small niceties: show stage initially if orientation already known ---------- */
-setTimeout(()=> {
-  if(!currentOrientation) setOrientationIfChanged(window.innerHeight>window.innerWidth ? 'upright' : 'landscape-right');
-}, 400);
-
-/* ---------- Extra: service worker register stub (offline/PWA wow factor) ---------- */
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/sw.js').then(()=> {
-    console.log('sw registered (if you add a /sw.js)');
-  }).catch(()=>{});
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // iOS 13+ requires user permission
+        document.body.addEventListener('click', async () => {
+            try {
+                const permission = await DeviceOrientationEvent.requestPermission();
+                if (permission === 'granted') {
+                    window.addEventListener('deviceorientation', deviceOrientationHandler);
+                }
+            } catch (error) {
+                console.error("DeviceOrientation permission request failed.", error);
+            }
+        }, { once: true });
+    } else if (window.DeviceOrientationEvent) {
+        // Other browsers
+        window.addEventListener('deviceorientation', deviceOrientationHandler);
+    } else {
+        orientationLabel.textContent = 'Orientation API not supported.';
+    }
 }
 
-/* ---------- Optional: quick demo helper to show orientation names clickable (for desktop demo) ---------- */
-if(window.location.search.includes('demo')){
-  ['upright','upside-down','landscape-right','landscape-left'].forEach(o=>{
-    const b = document.createElement('button'); b.textContent=o; b.style.margin='6px';
-    b.onclick=()=> setOrientationIfChanged(o);
-    document.querySelector('footer .mini').appendChild(b);
-  });
-}
+initialize();
+
 </script>
 </body>
 </html>
