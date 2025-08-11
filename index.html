@@ -1,84 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>AI-First Orientation App</title>
     <style>
         /* --- 1. GLOBAL STYLES & LAYOUT --- */
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Poppins', sans-serif; overflow: hidden; background-color: #1a1a1a; color: #f0f0f0; }
+        .main-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; transition: background-color 0.5s ease-in-out; }
+        .main-container.portrait-primary { background-color: #1d1d1d; }
+        .main-container.landscape-primary { background-color: #f0f2f5; }
+        .main-container.portrait-secondary { background-color: #2c3e50; }
+        .main-container.landscape-secondary { background: linear-gradient(135deg, #6a85b6, #bac8e0); }
+        .app-view { width: 100%; height: 100%; display: none; justify-content: center; align-items: center; padding: 1rem; box-sizing: border-box; animation: fadeIn 0.6s ease-in-out; }
+        .app-view.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        #permissionButton { font-size: 1.2rem; padding: 15px 25px; border-radius: 12px; border: none; background-color: #008CBA; color: white; cursor: pointer; }
 
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            font-family: 'Poppins', sans-serif;
-            overflow: hidden; /* Prevent scrolling */
-            background-color: #1a1a1a;
-            color: #f0f0f0;
-        }
-
-        .main-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: background-color 0.5s ease-in-out;
-        }
-
-        /* WOW Factor: Background colors for each state */
-        .main-container.portrait-primary { background-color: #1d1d1d; } /* Alarm */
-        .main-container.landscape-primary { background-color: #f0f2f5; } /* Stopwatch */
-        .main-container.portrait-secondary { background-color: #2c3e50; } /* Timer */
-        .main-container.landscape-secondary { background: linear-gradient(135deg, #6a85b6, #bac8e0); } /* Weather */
-
-        .app-view {
-            width: 100%;
-            height: 100%;
-            display: none; /* Hidden by default */
-            justify-content: center;
-            align-items: center;
-            padding: 1rem;
-            box-sizing: border-box;
-            /* WOW Factor: Seamless fade transition */
-            animation: fadeIn 0.6s ease-in-out;
-        }
-
-        .app-view.active {
-            display: flex;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.98); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        #permissionButton {
-            font-size: 1.2rem;
-            padding: 15px 25px;
-            border-radius: 12px;
-            border: none;
-            background-color: #008CBA;
-            color: white;
-            cursor: pointer;
-        }
-        
-        /* --- 2. ALARM CLOCK STYLES (Portrait Upright) --- */
-        .alarm-clock-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background-color: #1d1d1d;
-            color: #f0f0f0;
-            padding: 1.5rem;
-            border-radius: 16px;
-            width: 100%;
-            max-width: 380px;
-            box-sizing: border-box;
-            text-align: center;
-        }
+        /* --- 2. ALARM CLOCK STYLES --- */
+        .alarm-clock-container { display: flex; flex-direction: column; align-items: center; background-color: #1d1d1d; color: #f0f0f0; padding: 1.5rem; border-radius: 16px; width: 100%; max-width: 380px; box-sizing: border-box; text-align: center; }
         .analog-clock { width: 150px; height: 150px; border: 4px solid #00aaff; border-radius: 50%; position: relative; margin-bottom: 1rem; }
         .clock-hand { position: absolute; bottom: 50%; left: 50%; transform-origin: bottom; background-color: #f0f0f0; border-radius: 2px; }
         .hour-hand { width: 4px; height: 40px; background-color: #00aaff; }
@@ -99,7 +40,7 @@
         @keyframes pulse-alarm { 0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(255, 71, 87, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); } }
         .pulsing-alert .analog-clock { animation: pulse-alarm 1.5s infinite; }
 
-        /* --- 3. STOPWATCH STYLES (Landscape Right) --- */
+        /* --- 3. STOPWATCH STYLES --- */
         .stopwatch-container { display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; padding: 2rem; border-radius: 16px; width: 100%; max-width: 450px; box-sizing: border-box; }
         .stopwatch-container .time-display { font-family: 'Courier New', Courier, monospace; font-size: 3.5rem; font-weight: bold; color: #333; margin-bottom: 1.5rem; }
         .stopwatch-container .controls { display: flex; justify-content: space-around; width: 100%; margin-bottom: 1.5rem; }
@@ -116,7 +57,7 @@
         .stopwatch-container .lap-number { color: #6c757d; }
         .stopwatch-container .lap-time { color: #343a40; font-weight: 600; }
 
-        /* --- 4. TIMER STYLES (Portrait Upside Down) --- */
+        /* --- 4. TIMER STYLES --- */
         .timer-container { display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #2c3e50; color: #ecf0f1; padding: 2rem; border-radius: 16px; width: 100%; max-width: 350px; box-sizing: border-box; text-align: center; }
         .timer-container .progress-ring { position: relative; width: 200px; height: 200px; margin-bottom: 1.5rem; }
         .timer-container .progress-ring__svg { transform: rotate(-90deg); width: 100%; height: 100%; }
@@ -140,7 +81,7 @@
         @keyframes flash { 0%, 100% { background-color: #e74c3c; } 50% { background-color: #2c3e50; } }
         .timer-container.flashing-alert { animation: flash 1s infinite; }
 
-        /* --- 5. WEATHER STYLES (Landscape Left) --- */
+        /* --- 5. WEATHER STYLES --- */
         .weather-container { font-family: 'Poppins', sans-serif; width: 100%; max-width: 450px; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); color: white; text-shadow: 1px 1px 3px rgba(0,0,0,0.3); box-sizing: border-box; transition: background 0.5s ease-in-out; position: relative; overflow: hidden; }
         .weather-container.sunny { background: linear-gradient(135deg, #FFD700, #FFA500); }
         .weather-container.cloudy { background: linear-gradient(135deg, #B0C4DE, #778899); }
@@ -160,11 +101,9 @@
         .weather-container .message { text-align: center; font-size: 1.2rem; padding: 2rem; }
         .weather-container .loader { border: 5px solid #f3f3f3; border-top: 5px solid #555; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
     </style>
 </head>
 <body>
-
     <div class="main-container" id="mainContainer">
         <button id="permissionButton">Enable Orientation Sensors</button>
 
@@ -173,7 +112,7 @@
         <div id="view-landscape-primary" class="app-view"></div>
         <div id="view-portrait-secondary" class="app-view"></div>
         <div id="view-landscape-secondary" class="app-view"></div>
-        
+
         <!-- Alarm Modal (Global) -->
         <div class="alarm-modal-overlay" id="alarmModal">
             <div class="alarm-modal-content">
@@ -184,107 +123,130 @@
         </div>
     </div>
 
-    <script>
-    // --- MASTER SCRIPT ---
+<script>
+/* ---------- MAIN SCRIPT (fixed & hardened) ---------- */
+const mainContainer = document.getElementById('mainContainer');
+const permissionButton = document.getElementById('permissionButton');
+const views = {
+    'portrait-primary': document.getElementById('view-portrait-primary'),
+    'landscape-primary': document.getElementById('view-landscape-primary'), // Right
+    'portrait-secondary': document.getElementById('view-portrait-secondary'),
+    'landscape-secondary': document.getElementById('view-landscape-secondary'), // Left
+};
+let activeViewId = null;
 
-    // --- 1. DOM ELEMENTS & STATE ---
-    const mainContainer = document.getElementById('mainContainer');
-    const permissionButton = document.getElementById('permissionButton');
-    const views = {
-        'portrait-primary': document.getElementById('view-portrait-primary'),
-        'landscape-primary': document.getElementById('view-landscape-primary'), // Right
-        'portrait-secondary': document.getElementById('view-portrait-secondary'),
-        'landscape-secondary': document.getElementById('view-landscape-secondary'), // Left
-    };
-    let activeViewId = null;
-    
-    // --- STABILITY CHECK (DEBOUNCING) ---
-    let orientationTimeout = null;
-    const DEBOUNCE_DELAY = 400; // ms
+/* Debounce */
+let orientationTimeout = null;
+const DEBOUNCE_DELAY = 400;
 
-    // --- 2. ORIENTATION LOGIC ---
-    permissionButton.addEventListener('click', () => {
-        if (typeof(DeviceOrientationEvent) !== 'undefined' && typeof(DeviceOrientationEvent.requestPermission) === 'function') {
-            DeviceOrientationEvent.requestPermission()
-                .then(permissionState => {
-                    if (permissionState === 'granted') {
-                        window.addEventListener('deviceorientation', handleOrientation);
-                        permissionButton.style.display = 'none';
-                        initializeApps();
-                    }
-                }).catch(console.error);
-        } else {
-            window.addEventListener('deviceorientation', handleOrientation);
-            permissionButton.style.display = 'none';
-            initializeApps();
+// Orientation handling: prefer DeviceOrientation, but fall back to screen.orientation and resize
+function startOrientationListeners() {
+    // DeviceOrientation with permission flow
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // keep permissionButton visible to prompt user
+        permissionButton.style.display = '';
+        permissionButton.addEventListener('click', () => {
+            DeviceOrientationEvent.requestPermission().then(p => {
+                if (p === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                }
+                // Hide button and initialize apps in any case (granted or denied)
+                permissionButton.style.display = 'none';
+                initializeApps();
+            }).catch(err => {
+                console.error('permission error', err);
+                // Hide button; fallback
+                permissionButton.style.display = 'none';
+                initializeApps();
+            });
+        }, { once: true });
+    } else {
+        // No permission flow required
+        permissionButton.style.display = 'none';
+        window.addEventListener('deviceorientation', handleOrientation);
+        initializeApps();
+    }
+
+    // fallback: if deviceorientation events not available or not firing, use screen.orientation and resize
+    if (screen.orientation && screen.orientation.type) {
+        screen.orientation.addEventListener('change', () => {
+            const type = screen.orientation.type;
+            if (type.includes('portrait')) switchView(type.includes('secondary') ? 'portrait-secondary' : 'portrait-primary');
+            else switchView(type.includes('secondary') ? 'landscape-secondary' : 'landscape-primary');
+        });
+    }
+    window.addEventListener('resize', () => {
+        // fallback orientation determination by aspect ratio
+        const isPortrait = window.innerHeight > window.innerWidth;
+        if (isPortrait) switchView('portrait-primary');
+        else {
+            // prefer right landscape
+            switchView('landscape-primary');
         }
     });
+}
 
-    function handleOrientation(event) {
-        // Clear any previous timeout to check for a new stable position
-        clearTimeout(orientationTimeout);
+function handleOrientation(event) {
+    clearTimeout(orientationTimeout);
+    orientationTimeout = setTimeout(() => {
+        const beta = typeof event.beta === 'number' ? event.beta : null;
+        const gamma = typeof event.gamma === 'number' ? event.gamma : null;
+        let newOrientationId = null;
 
-        orientationTimeout = setTimeout(() => {
-            const beta = event.beta;
-            const gamma = event.gamma;
-            let newOrientationId = null;
+        const landscapeThreshold = 60;
+        const portraitThreshold = 60;
 
-            // Define stricter angle thresholds for stability
-            const landscapeThreshold = 60;
-            const portraitThreshold = 60;
+        if (gamma !== null && gamma > landscapeThreshold) newOrientationId = 'landscape-primary';
+        else if (gamma !== null && gamma < -landscapeThreshold) newOrientationId = 'landscape-secondary';
+        else if (beta !== null && beta > portraitThreshold && beta < 120) newOrientationId = 'portrait-primary';
+        else if (beta !== null && beta < -portraitThreshold && beta > -120) newOrientationId = 'portrait-secondary';
 
-            if (gamma > landscapeThreshold) newOrientationId = 'landscape-primary';
-            else if (gamma < -landscapeThreshold) newOrientationId = 'landscape-secondary';
-            else if (beta > portraitThreshold && beta < 120) newOrientationId = 'portrait-primary';
-            else if (beta < -portraitThreshold && beta > -120) newOrientationId = 'portrait-secondary';
-
-            // Switch view only if a stable orientation is detected and it's different
-            if (newOrientationId && newOrientationId !== activeViewId) {
-                switchView(newOrientationId);
-            }
-        }, DEBOUNCE_DELAY);
-    }
-
-    function switchView(orientationId) {
-        if (activeViewId) {
-            views[activeViewId].classList.remove('active');
+        if (newOrientationId && newOrientationId !== activeViewId) {
+            switchView(newOrientationId);
         }
-        
-        activeViewId = orientationId;
-        const newView = views[activeViewId];
-        
-        if (newView) {
-            newView.classList.add('active');
-            mainContainer.className = `main-container ${activeViewId}`;
-            
-            // Special trigger for weather app on first view
-            if (activeViewId === 'landscape-secondary' && !weatherApp.isInitialized) {
-                weatherApp.initialize();
-            }
+    }, DEBOUNCE_DELAY);
+}
+
+function switchView(orientationId) {
+    if (activeViewId && views[activeViewId]) views[activeViewId].classList.remove('active');
+
+    activeViewId = orientationId;
+    const newView = views[activeViewId];
+
+    // update classes on main container (keep only necessary classes)
+    mainContainer.className = 'main-container ' + activeViewId;
+
+    if (newView) {
+        newView.classList.add('active');
+
+        // initialize weather only when needed
+        if (activeViewId === 'landscape-secondary' && !weatherApp.isInitialized) {
+            weatherApp.initialize();
         }
     }
+}
 
-    // --- 3. APP INITIALIZATION ---
-    function initializeApps() {
-        alarmClockApp.initialize();
-        stopwatchApp.initialize();
-        timerApp.initialize();
-        // Weather is initialized on first view when needed
-    }
+/* ---------- Application initialization ---------- */
+function initializeApps() {
+    alarmClockApp.initialize();
+    stopwatchApp.initialize();
+    timerApp.initialize();
+    // weatherApp initialized on demand
+}
 
-    // --- 4. INDIVIDUAL APP MODULES ---
-
-    // --- ALARM CLOCK APP ---
-    const alarmClockApp = {
-        elements: {},
-        state: { alarms: [], ringingAlarmId: null, audioContext: null, oscillator: null, gainNode: null },
-        initialize() {
-            const container = views['portrait-primary'];
-            container.innerHTML = `
+/* ---------- ALARM CLOCK APP (fixed snooze & stopSound) ---------- */
+const alarmClockApp = {
+    elements: {},
+    state: { alarms: [], ringingAlarmId: null, audioContext: null, oscillator: null, gainNode: null },
+    initialize() {
+        const container = views['portrait-primary'];
+        container.innerHTML = `
             <div class="alarm-clock-container">
                 <div class="analog-clock" id="alarmAnalogClock">
-                    <div class="clock-center"></div><div class="clock-hand hour-hand" id="hourHand"></div>
-                    <div class="clock-hand minute-hand" id="minuteHand"></div><div class="clock-hand second-hand" id="secondHand"></div>
+                    <div class="clock-center"></div>
+                    <div class="clock-hand hour-hand" id="hourHand"></div>
+                    <div class="clock-hand minute-hand" id="minuteHand"></div>
+                    <div class="clock-hand second-hand" id="secondHand"></div>
                 </div>
                 <div class="digital-clock" id="digitalClock">00:00:00</div>
                 <div class="add-alarm-form">
@@ -292,119 +254,151 @@
                 </div>
                 <div class="alarms-list-container" id="alarmsList"></div>
             </div>`;
-            
-            this.elements = {
-                hourHand: document.getElementById('hourHand'), minuteHand: document.getElementById('minuteHand'),
-                secondHand: document.getElementById('secondHand'), digitalClock: document.getElementById('digitalClock'),
-                alarmTimeInput: document.getElementById('alarmTimeInput'), addAlarmBtn: document.getElementById('addAlarmBtn'),
-                alarmsList: document.getElementById('alarmsList'), alarmModal: document.getElementById('alarmModal'),
-                snoozeBtn: document.getElementById('snoozeBtn'), dismissBtn: document.getElementById('dismissBtn'),
-                analogClock: document.getElementById('alarmAnalogClock')
-            };
-            
-            this.state.alarms = JSON.parse(localStorage.getItem('alarms')) || [];
-            this.elements.addAlarmBtn.addEventListener('click', () => this.add());
-            this.elements.alarmsList.addEventListener('click', (e) => {
-                if (e.target.classList.contains('delete-alarm-btn')) this.delete(parseInt(e.target.dataset.id));
-            });
-            this.elements.snoozeBtn.addEventListener('click', () => this.snooze());
-            this.elements.dismissBtn.addEventListener('click', () => this.dismiss());
-            
-            setInterval(() => this.setDate(), 1000);
-            this.render();
-            this.setDate();
-        },
-        setDate() {
-            const now = new Date();
-            this.elements.secondHand.style.transform = `rotate(${((now.getSeconds() / 60) * 360) + 90}deg)`;
-            this.elements.minuteHand.style.transform = `rotate(${((now.getMinutes() / 60) * 360) + ((now.getSeconds()/60)*6) + 90}deg)`;
-            this.elements.hourHand.style.transform = `rotate(${((now.getHours() / 12) * 360) + ((now.getMinutes()/60)*30) + 90}deg)`;
-            this.elements.digitalClock.textContent = now.toLocaleTimeString();
-            this.check(now);
-        },
-        add() {
-            const time = this.elements.alarmTimeInput.value;
-            if (!time) return;
-            this.state.alarms.push({ id: Date.now(), time: time, triggered: false });
+        this.elements = {
+            hourHand: document.getElementById('hourHand'),
+            minuteHand: document.getElementById('minuteHand'),
+            secondHand: document.getElementById('secondHand'),
+            digitalClock: document.getElementById('digitalClock'),
+            alarmTimeInput: document.getElementById('alarmTimeInput'),
+            addAlarmBtn: document.getElementById('addAlarmBtn'),
+            alarmsList: document.getElementById('alarmsList'),
+            alarmModal: document.getElementById('alarmModal'),
+            snoozeBtn: document.getElementById('snoozeBtn'),
+            dismissBtn: document.getElementById('dismissBtn'),
+            analogClock: document.getElementById('alarmAnalogClock')
+        };
+        this.state.alarms = JSON.parse(localStorage.getItem('alarms') || '[]');
+        this.elements.addAlarmBtn.addEventListener('click', () => this.add());
+        this.elements.alarmsList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-alarm-btn')) this.delete(parseInt(e.target.dataset.id, 10));
+        });
+        this.elements.snoozeBtn.addEventListener('click', () => this.snooze());
+        this.elements.dismissBtn.addEventListener('click', () => this.dismiss());
+        setInterval(() => this.setDate(), 1000);
+        this.render();
+        this.setDate();
+    },
+    setDate() {
+        const now = new Date();
+        // adjust rotations - we add 90 degrees originally; keep same math
+        if (this.elements.secondHand) this.elements.secondHand.style.transform = `rotate(${((now.getSeconds() / 60) * 360) + 90}deg)`;
+        if (this.elements.minuteHand) this.elements.minuteHand.style.transform = `rotate(${((now.getMinutes() / 60) * 360) + ((now.getSeconds() / 60) * 6) + 90}deg)`;
+        if (this.elements.hourHand) this.elements.hourHand.style.transform = `rotate(${((now.getHours() / 12) * 360) + ((now.getMinutes() / 60) * 30) + 90}deg)`;
+        if (this.elements.digitalClock) this.elements.digitalClock.textContent = now.toLocaleTimeString();
+        this.check(now);
+    },
+    add() {
+        const time = this.elements.alarmTimeInput.value;
+        if (!time) return;
+        // prevent duplicates
+        if (this.state.alarms.some(a => a.time === time)) {
+            alert('Alarm already set for that time');
+            return;
+        }
+        const alarmObj = { id: Date.now(), time: time, triggered: false };
+        this.state.alarms.push(alarmObj);
+        localStorage.setItem('alarms', JSON.stringify(this.state.alarms));
+        this.elements.alarmTimeInput.value = '';
+        this.render();
+    },
+    delete(id) {
+        this.state.alarms = this.state.alarms.filter(a => a.id !== id);
+        localStorage.setItem('alarms', JSON.stringify(this.state.alarms));
+        this.render();
+    },
+    render() {
+        this.elements.alarmsList.innerHTML = '';
+        this.state.alarms.forEach(alarm => {
+            const item = document.createElement('div');
+            item.className = 'alarm-item';
+            item.innerHTML = `<span>${alarm.time}</span><button class="delete-alarm-btn" data-id="${alarm.id}">&times;</button>`;
+            this.elements.alarmsList.appendChild(item);
+        });
+    },
+    check(now) {
+        const currentTime = now.toTimeString().slice(0, 5); // HH:MM
+        // reset triggers at midnight
+        if (currentTime === '00:00') {
+            this.state.alarms.forEach(a => a.triggered = false);
             localStorage.setItem('alarms', JSON.stringify(this.state.alarms));
-            this.render();
-        },
-        delete(id) {
-            this.state.alarms = this.state.alarms.filter(a => a.id !== id);
-            localStorage.setItem('alarms', JSON.stringify(this.state.alarms));
-            this.render();
-        },
-        render() {
-            this.elements.alarmsList.innerHTML = '';
-            this.state.alarms.forEach(alarm => {
-                const item = document.createElement('div');
-                item.className = 'alarm-item';
-                item.innerHTML = `<span>${alarm.time}</span><button class="delete-alarm-btn" data-id="${alarm.id}">&times;</button>`;
-                this.elements.alarmsList.appendChild(item);
-            });
-        },
-        check(now) {
-            const currentTime = now.toTimeString().slice(0, 5);
-            if (currentTime === "00:00") {
-                this.state.alarms.forEach(a => a.triggered = false);
+        }
+        this.state.alarms.forEach(alarm => {
+            if (alarm.time === currentTime && !alarm.triggered) {
+                alarm.triggered = true;
+                localStorage.setItem('alarms', JSON.stringify(this.state.alarms));
+                this.ring(alarm.id);
             }
-            this.state.alarms.forEach(alarm => {
-                if (alarm.time === currentTime && !alarm.triggered) {
-                    alarm.triggered = true;
-                    localStorage.setItem('alarms', JSON.stringify(this.state.alarms));
-                    this.ring(alarm.id);
-                }
-            });
-        },
-        startSound() {
-            if (!this.state.audioContext) this.state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            if (this.state.oscillator) this.state.oscillator.stop();
-
-            this.state.oscillator = this.state.audioContext.createOscillator();
-            this.state.gainNode = this.state.audioContext.createGain();
-            this.state.oscillator.connect(this.state.gainNode);
-            this.state.gainNode.connect(this.state.audioContext.destination);
-            this.state.oscillator.type = 'triangle';
-            this.state.oscillator.frequency.setValueAtTime(440, this.state.audioContext.currentTime);
-            this.state.gainNode.gain.setValueAtTime(0.01, this.state.audioContext.currentTime);
-            this.state.gainNode.gain.exponentialRampToValueAtTime(0.4, this.state.audioContext.currentTime + 12);
-            this.state.oscillator.start();
-        },
-        stopSound() {
-            if (this.state.gainNode) {
-                this.state.gainNode.gain.exponentialRampToValueAtTime(0.0001, this.state.audioContext.currentTime + 0.5);
-                this.state.oscillator.stop(this.state.audioContext.currentTime + 0.5);
+        });
+    },
+    startSound() {
+        if (!this.state.audioContext) this.state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (this.state.oscillator) {
+            try { this.state.oscillator.stop(); } catch (e) {}
+            this.state.oscillator = null;
+            this.state.gainNode = null;
+        }
+        this.state.oscillator = this.state.audioContext.createOscillator();
+        this.state.gainNode = this.state.audioContext.createGain();
+        this.state.oscillator.connect(this.state.gainNode);
+        this.state.gainNode.connect(this.state.audioContext.destination);
+        this.state.oscillator.type = 'triangle';
+        this.state.oscillator.frequency.setValueAtTime(440, this.state.audioContext.currentTime);
+        this.state.gainNode.gain.setValueAtTime(0.01, this.state.audioContext.currentTime);
+        // ramp up comfortably
+        this.state.gainNode.gain.linearRampToValueAtTime(0.4, this.state.audioContext.currentTime + 1.2);
+        this.state.oscillator.start();
+    },
+    stopSound() {
+        if (!this.state.audioContext || !this.state.oscillator || !this.state.gainNode) return;
+        try {
+            const stopAt = this.state.audioContext.currentTime + 0.5;
+            this.state.gainNode.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+            this.state.oscillator.stop(stopAt + 0.01);
+            // nullify after stop time
+            setTimeout(() => {
                 this.state.oscillator = null;
                 this.state.gainNode = null;
-            }
-        },
-        ring(id) {
-            this.state.ringingAlarmId = id;
-            this.elements.alarmModal.style.display = 'flex';
-            this.elements.analogClock.classList.add('pulsing-alert');
-            this.startSound();
-        },
-        dismiss() {
-             this.elements.alarmModal.style.display = 'none';
-             this.elements.analogClock.classList.remove('pulsing-alert');
-             this.stopSound();
-        },
-        snooze() {
-            this.dismiss();
-            const snoozeTime = new Date(Date.now() + 5 * 60000);
-            const hours = snoozeTime.getHours().toString().padStart(2, '0');
-            const minutes = snoozeTime.getMinutes().toString().padStart(2, '0');
-            this.addAlarm({ time: `${hours}:${minutes}` });
+            }, 600);
+        } catch (e) {
+            console.warn('stopSound error', e);
+            try { this.state.oscillator.stop(); } catch (e) {}
+            this.state.oscillator = null;
+            this.state.gainNode = null;
         }
-    };
+    },
+    ring(id) {
+        this.state.ringingAlarmId = id;
+        if (this.elements.alarmModal) this.elements.alarmModal.style.display = 'flex';
+        if (this.elements.analogClock) this.elements.analogClock.classList.add('pulsing-alert');
+        this.startSound();
+        // vibrate if available
+        if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+    },
+    dismiss() {
+        if (this.elements.alarmModal) this.elements.alarmModal.style.display = 'none';
+        if (this.elements.analogClock) this.elements.analogClock.classList.remove('pulsing-alert');
+        this.stopSound();
+    },
+    snooze() {
+        this.dismiss();
+        const snoozeTime = new Date(Date.now() + 5 * 60 * 1000);
+        const hours = snoozeTime.getHours().toString().padStart(2, '0');
+        const minutes = snoozeTime.getMinutes().toString().padStart(2, '0');
+        // push new alarm
+        const alarmObj = { id: Date.now(), time: `${hours}:${minutes}`, triggered: false };
+        this.state.alarms.push(alarmObj);
+        localStorage.setItem('alarms', JSON.stringify(this.state.alarms));
+        this.render();
+    }
+};
 
-    // --- STOPWATCH APP ---
-    const stopwatchApp = {
-        elements: {},
-        state: { startTime: 0, elapsedTime: 0, timerInterval: null, isRunning: false, laps: [] },
-        initialize() {
-            const container = views['landscape-primary'];
-            container.innerHTML = `
+/* ---------- STOPWATCH APP (unchanged, but safe) ---------- */
+const stopwatchApp = {
+    elements: {},
+    state: { startTime: 0, elapsedTime: 0, timerInterval: null, isRunning: false, laps: [] },
+    initialize() {
+        const container = views['landscape-primary'];
+        container.innerHTML = `
             <div class="stopwatch-container">
                 <div class="time-display" id="stopwatchTimeDisplay">00:00:000</div>
                 <div class="controls">
@@ -414,80 +408,78 @@
                 <div class="controls"><button class="btn btn-lap" id="stopwatchLapBtn" disabled>Lap</button></div>
                 <div class="laps-container"><ol class="laps-list" id="stopwatchLapsList"></ol></div>
             </div>`;
-            
-            this.elements = {
-                timeDisplay: document.getElementById('stopwatchTimeDisplay'),
-                startStopBtn: document.getElementById('stopwatchStartStopBtn'),
-                resetBtn: document.getElementById('stopwatchResetBtn'),
-                lapBtn: document.getElementById('stopwatchLapBtn'),
-                lapsList: document.getElementById('stopwatchLapsList')
-            };
-
-            this.elements.startStopBtn.addEventListener('click', () => this.state.isRunning ? this.stop() : this.start());
-            this.elements.resetBtn.addEventListener('click', () => this.reset());
-            this.elements.lapBtn.addEventListener('click', () => this.lap());
-        },
-        start() {
-            this.state.isRunning = true;
-            this.state.startTime = performance.now() - this.state.elapsedTime;
-            this.state.timerInterval = requestAnimationFrame(() => this.update());
-            this.updateUI();
-        },
-        stop() {
-            this.state.isRunning = false;
-            cancelAnimationFrame(this.state.timerInterval);
-            this.updateUI();
-        },
-        reset() {
-            this.stop();
-            this.state.elapsedTime = 0;
-            this.state.laps = [];
-            this.elements.timeDisplay.textContent = this.formatTime(0);
-            this.elements.lapsList.innerHTML = '';
-            this.updateUI();
-        },
-        lap() {
-            if (!this.state.isRunning) return;
-            const lapTime = this.state.elapsedTime;
-            this.state.laps.push(lapTime);
-            const lapItem = document.createElement('li');
-            lapItem.className = 'lap-item';
-            lapItem.innerHTML = `<span class="lap-number">Lap ${this.state.laps.length}</span><span class="lap-time">${this.formatTime(lapTime)}</span>`;
-            this.elements.lapsList.prepend(lapItem);
-        },
-        update() {
-            if (!this.state.isRunning) return;
-            this.state.elapsedTime = performance.now() - this.state.startTime;
-            this.elements.timeDisplay.textContent = this.formatTime(this.state.elapsedTime);
-            this.state.timerInterval = requestAnimationFrame(() => this.update());
-        },
-        updateUI() {
-            if (this.state.isRunning) {
-                this.elements.startStopBtn.textContent = 'Stop';
-                this.elements.startStopBtn.className = 'btn btn-stop';
-                this.elements.lapBtn.disabled = false;
-            } else {
-                this.elements.startStopBtn.textContent = 'Start';
-                this.elements.startStopBtn.className = 'btn btn-start';
-                this.elements.lapBtn.disabled = true;
-            }
-        },
-        formatTime(time) {
-            const pad = (num, size) => num.toString().padStart(size, '0');
-            const minutes = pad(Math.floor(time / 60000), 2);
-            const seconds = pad(Math.floor((time % 60000) / 1000), 2);
-            const milliseconds = pad(time % 1000, 3);
-            return `${minutes}:${seconds}:${milliseconds}`;
+        this.elements = {
+            timeDisplay: document.getElementById('stopwatchTimeDisplay'),
+            startStopBtn: document.getElementById('stopwatchStartStopBtn'),
+            resetBtn: document.getElementById('stopwatchResetBtn'),
+            lapBtn: document.getElementById('stopwatchLapBtn'),
+            lapsList: document.getElementById('stopwatchLapsList')
+        };
+        this.elements.startStopBtn.addEventListener('click', () => this.state.isRunning ? this.stop() : this.start());
+        this.elements.resetBtn.addEventListener('click', () => this.reset());
+        this.elements.lapBtn.addEventListener('click', () => this.lap());
+    },
+    start() {
+        this.state.isRunning = true;
+        this.state.startTime = performance.now() - this.state.elapsedTime;
+        this.state.timerInterval = requestAnimationFrame(() => this.update());
+        this.updateUI();
+    },
+    stop() {
+        this.state.isRunning = false;
+        cancelAnimationFrame(this.state.timerInterval);
+        this.updateUI();
+    },
+    reset() {
+        this.stop();
+        this.state.elapsedTime = 0;
+        this.state.laps = [];
+        this.elements.timeDisplay.textContent = this.formatTime(0);
+        this.elements.lapsList.innerHTML = '';
+        this.updateUI();
+    },
+    lap() {
+        if (!this.state.isRunning) return;
+        const lapTime = this.state.elapsedTime;
+        this.state.laps.push(lapTime);
+        const lapItem = document.createElement('li');
+        lapItem.className = 'lap-item';
+        lapItem.innerHTML = `<span class="lap-number">Lap ${this.state.laps.length}</span><span class="lap-time">${this.formatTime(lapTime)}</span>`;
+        this.elements.lapsList.prepend(lapItem);
+    },
+    update() {
+        if (!this.state.isRunning) return;
+        this.state.elapsedTime = performance.now() - this.state.startTime;
+        this.elements.timeDisplay.textContent = this.formatTime(this.state.elapsedTime);
+        this.state.timerInterval = requestAnimationFrame(() => this.update());
+    },
+    updateUI() {
+        if (this.state.isRunning) {
+            this.elements.startStopBtn.textContent = 'Stop';
+            this.elements.startStopBtn.className = 'btn btn-stop';
+            this.elements.lapBtn.disabled = false;
+        } else {
+            this.elements.startStopBtn.textContent = 'Start';
+            this.elements.startStopBtn.className = 'btn btn-start';
+            this.elements.lapBtn.disabled = true;
         }
-    };
+    },
+    formatTime(time) {
+        const pad = (num, size) => num.toString().padStart(size, '0');
+        const minutes = pad(Math.floor(time / 60000), 2);
+        const seconds = pad(Math.floor((time % 60000) / 1000), 2);
+        const milliseconds = pad(Math.floor(time % 1000), 3);
+        return `${minutes}:${seconds}:${milliseconds}`;
+    }
+};
 
-    // --- TIMER APP ---
-    const timerApp = {
-        elements: {},
-        state: { isRunning: false, timerInterval: null, remainingSeconds: 0, totalSeconds: 0 },
-        initialize() {
-            const container = views['portrait-secondary'];
-            container.innerHTML = `
+/* ---------- TIMER APP (fixed digit animation & UI tweaks) ---------- */
+const timerApp = {
+    elements: {},
+    state: { isRunning: false, timerInterval: null, remainingSeconds: 0, totalSeconds: 0, prevSecond: null },
+    initialize() {
+        const container = views['portrait-secondary'];
+        container.innerHTML = `
             <div class="timer-container" id="timerComponentContainer">
                 <div class="progress-ring">
                     <svg class="progress-ring__svg">
@@ -508,195 +500,250 @@
                     <button class="btn btn-reset" id="timerResetBtn">Reset</button><button class="btn btn-start" id="timerStartPauseBtn">Start</button>
                 </div>
             </div>`;
-            
-            this.elements = {
-                container: document.getElementById('timerComponentContainer'),
-                timeDisplay: document.getElementById('timerTimeDisplay'),
-                progressCircle: document.getElementById('timerProgressCircle'),
-                inputsContainer: document.getElementById('timerInputsContainer'),
-                startPauseBtn: document.getElementById('timerStartPauseBtn'),
-                resetBtn: document.getElementById('timerResetBtn'),
-                hoursInput: document.getElementById('hoursInput'),
-                minutesInput: document.getElementById('minutesInput'),
-                secondsInput: document.getElementById('secondsInput'),
-                quickSets: container.querySelector('.quick-sets')
-            };
+        this.elements = {
+            container: document.getElementById('timerComponentContainer'),
+            timeDisplay: document.getElementById('timerTimeDisplay'),
+            progressCircle: document.getElementById('timerProgressCircle'),
+            inputsContainer: document.getElementById('timerInputsContainer'),
+            startPauseBtn: document.getElementById('timerStartPauseBtn'),
+            resetBtn: document.getElementById('timerResetBtn'),
+            hoursInput: document.getElementById('hoursInput'),
+            minutesInput: document.getElementById('minutesInput'),
+            secondsInput: document.getElementById('secondsInput'),
+            quickSets: container.querySelector('.quick-sets')
+        };
+        const radius = this.elements.progressCircle.r.baseVal.value;
+        this.circumference = 2 * Math.PI * radius;
+        this.elements.progressCircle.style.strokeDasharray = `${this.circumference} ${this.circumference}`;
 
-            const radius = this.elements.progressCircle.r.baseVal.value;
-            this.circumference = 2 * Math.PI * radius;
-            this.elements.progressCircle.style.strokeDasharray = `${this.circumference} ${this.circumference}`;
+        this.elements.startPauseBtn.addEventListener('click', () => this.state.isRunning ? this.pause() : this.start());
+        this.elements.resetBtn.addEventListener('click', () => this.reset());
+        this.elements.quickSets.addEventListener('click', (e) => {
+            if(e.target.dataset && e.target.dataset.minutes) this.setFromQuickSet(e.target.dataset.minutes);
+        });
 
-            this.elements.startPauseBtn.addEventListener('click', () => this.state.isRunning ? this.pause() : this.start());
-            this.elements.resetBtn.addEventListener('click', () => this.reset());
-            this.elements.quickSets.addEventListener('click', (e) => {
-                if(e.target.dataset.minutes) this.setFromQuickSet(e.target.dataset.minutes);
-            });
-            this.updateUI();
-        },
-        start() {
-            if(!this.state.isRunning) this.setFromInputs();
-            if (this.state.remainingSeconds <= 0) return;
-            this.state.isRunning = true;
-            this.state.timerInterval = setInterval(() => this.update(), 1000);
-            this.updateUI();
-        },
-        pause() {
-            this.state.isRunning = false;
-            clearInterval(this.state.timerInterval);
-            this.updateUI();
-        },
-        reset() {
-            this.pause();
-            this.state.remainingSeconds = 0;
-            this.state.totalSeconds = 0;
-            this.elements.container.classList.remove('flashing-alert');
-            this.updateDisplay();
-            this.updateUI();
-        },
-        update() {
-            this.state.remainingSeconds--;
-            this.updateDisplay();
-            if (this.state.remainingSeconds <= 0) {
-                this.finish();
-            }
-        },
-        finish() {
-            this.pause();
-            this.elements.container.classList.add('flashing-alert');
-        },
-        setFromInputs() {
-            const h = parseInt(this.elements.hoursInput.value) || 0;
-            const m = parseInt(this.elements.minutesInput.value) || 0;
-            const s = parseInt(this.elements.secondsInput.value) || 0;
-            this.state.totalSeconds = h * 3600 + m * 60 + s;
-            this.state.remainingSeconds = this.state.totalSeconds;
-            this.updateDisplay();
-        },
-        setFromQuickSet(minutes) {
-            this.state.totalSeconds = parseInt(minutes) * 60;
-            this.state.remainingSeconds = this.state.totalSeconds;
-            this.start();
-        },
-        updateDisplay() {
-            const h = Math.floor(this.state.remainingSeconds / 3600).toString().padStart(2, '0');
-            const m = Math.floor((this.state.remainingSeconds % 3600) / 60).toString().padStart(2, '0');
-            const s = (this.state.remainingSeconds % 60).toString().padStart(2, '0');
-            const oldSeconds = this.elements.timeDisplay.textContent.slice(-2);
-            this.elements.timeDisplay.innerHTML = `${h}:${m}:<span class="digit-tick">${s}</span>`;
-            if (s === oldSeconds) {
-                 this.elements.timeDisplay.querySelector('span').classList.remove('digit-tick');
-            }
-            const progress = this.state.totalSeconds > 0 ? (this.state.remainingSeconds / this.state.totalSeconds) : 0;
-            this.elements.progressCircle.style.strokeDashoffset = this.circumference * (1 - progress);
-        },
-        updateUI() {
-            if (this.state.isRunning) {
-                this.elements.startPauseBtn.textContent = 'Pause';
-                this.elements.startPauseBtn.className = 'btn btn-pause';
-                this.elements.inputsContainer.classList.add('hidden');
-            } else {
-                this.elements.startPauseBtn.textContent = 'Start';
-                this.elements.startPauseBtn.className = 'btn btn-start';
-                this.elements.inputsContainer.classList.remove('hidden');
-            }
+        // wire input changes
+        [this.elements.hoursInput, this.elements.minutesInput, this.elements.secondsInput].forEach(inp => {
+            inp.addEventListener('input', () => this.setFromInputs());
+        });
+
+        this.updateUI();
+        this.updateDisplay(); // initial
+    },
+    start() {
+        if (!this.state.isRunning) {
+            // if totalSeconds is 0, populate from inputs
+            if (this.state.totalSeconds === 0) this.setFromInputs();
         }
-    };
+        if (this.state.remainingSeconds <= 0) return;
+        this.state.isRunning = true;
+        this.state.timerInterval = setInterval(() => this.update(), 1000);
+        this.updateUI();
+    },
+    pause() {
+        this.state.isRunning = false;
+        clearInterval(this.state.timerInterval);
+        this.updateUI();
+    },
+    reset() {
+        this.pause();
+        this.state.remainingSeconds = 0;
+        this.state.totalSeconds = 0;
+        this.elements.container.classList.remove('flashing-alert');
+        this.updateDisplay();
+        this.updateUI();
+    },
+    update() {
+        this.state.remainingSeconds--;
+        if (this.state.remainingSeconds < 0) this.state.remainingSeconds = 0;
+        this.updateDisplay();
+        if (this.state.remainingSeconds <= 0) this.finish();
+    },
+    finish() {
+        this.pause();
+        this.elements.container.classList.add('flashing-alert');
+        // vibration and beep
+        if (navigator.vibrate) navigator.vibrate([300,100,300]);
+        try { new Audio().play().catch(()=>{}); } catch(e){}
+    },
+    setFromInputs() {
+        const h = parseInt(this.elements.hoursInput.value) || 0;
+        const m = parseInt(this.elements.minutesInput.value) || 0;
+        const s = parseInt(this.elements.secondsInput.value) || 0;
+        this.state.totalSeconds = h * 3600 + m * 60 + s;
+        this.state.remainingSeconds = this.state.totalSeconds;
+        this.state.prevSecond = null; // reset previous second tracker
+        this.updateDisplay();
+    },
+    setFromQuickSet(minutes) {
+        this.state.totalSeconds = parseInt(minutes, 10) * 60;
+        this.state.remainingSeconds = this.state.totalSeconds;
+        this.start();
+    },
+    updateDisplay() {
+        const seconds = Math.max(0, Math.floor(this.state.remainingSeconds % 60));
+        const m = Math.floor((this.state.remainingSeconds % 3600) / 60);
+        const h = Math.floor(this.state.remainingSeconds / 3600);
+        const hh = String(h).padStart(2,'0'), mm = String(m).padStart(2,'0'), ss = String(seconds).padStart(2,'0');
 
-    // --- WEATHER APP ---
-    const weatherApp = {
-        isInitialized: false,
-        elements: {},
-        initialize() {
-            this.isInitialized = true;
-            const container = views['landscape-secondary'];
-            container.innerHTML = `<div class="weather-container default" id="weatherComponentContainer"></div>`;
-            this.elements.container = document.getElementById('weatherComponentContainer');
-            this.elements.container.innerHTML = `<div class="search-bar"><input type="text" id="cityInput" placeholder="Enter city..."><button id="searchBtn">🔍</button></div><div class="message" id="messageArea"></div>`;
-            this.elements.searchBtn = document.getElementById('searchBtn');
-            this.elements.cityInput = document.getElementById('cityInput');
-            this.elements.messageArea = document.getElementById('messageArea');
-
-            this.elements.searchBtn.addEventListener('click', () => this.handleSearch());
-            this.elements.cityInput.addEventListener('keypress', (e) => e.key === 'Enter' && this.handleSearch());
-
-            if (navigator.geolocation) {
-                this.elements.messageArea.textContent = 'Getting location...';
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => this.fetchWeather(pos.coords.latitude, pos.coords.longitude),
-                    () => this.elements.messageArea.textContent = 'Location denied. Please search.'
-                );
-            } else {
-                this.elements.messageArea.textContent = 'Geolocation not supported.';
-            }
-        },
-        async handleSearch() {
-            const city = this.elements.cityInput.value;
-            if (!city) return;
-            this.elements.container.innerHTML += `<div class="loader"></div>`;
-            const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1&language=en&format=json`;
-            try {
-                const res = await fetch(geoUrl);
-                const data = await res.json();
-                if (!data.results) throw new Error('City not found');
-                const { latitude, longitude, name, country } = data.results[0];
-                this.fetchWeather(latitude, longitude, `${name}, ${country}`);
-            } catch (e) {
-                this.elements.messageArea.textContent = 'City not found.';
-            }
-        },
-        async fetchWeather(lat, lon, name = null) {
-            const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max&timezone=auto`;
-            try {
-                const res = await fetch(apiUrl);
-                const data = await res.json();
-                if (!name) {
-                    const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?latitude=${lat}&longitude=${lon}&count=1&language=en&format=json`;
-                    const geoRes = await fetch(geoUrl);
-                    const geoData = await geoRes.json();
-                    name = geoData.results ? `${geoData.results[0].name}, ${geoData.results[0].country}` : 'Your Location';
-                }
-                this.displayWeather(data, name);
-            } catch (e) {
-                this.elements.container.innerHTML = '<div class="message">Could not fetch weather.</div>';
-            }
-        },
-        displayWeather(data, name) {
-            const { temperature_2m: temp, apparent_temperature: feelsLike, weather_code, wind_speed_10m: wind } = data.current;
-            const info = this.getWeatherInfo(weather_code);
-            this.elements.container.className = `weather-container ${info.theme}`;
-            this.elements.container.innerHTML = `
-                <div class="search-bar"><input type="text" id="cityInput" placeholder="Another city..."><button id="searchBtn">🔍</button></div>
-                <div class="weather-main">
-                    <div class="location">${name}</div>
-                    <img src="${info.icon}" alt="${info.desc}" class="weather-icon">
-                    <h1 class="temperature">${Math.round(temp)}&deg;</h1>
-                    <p class="weather-description">${info.desc}</p>
-                </div>
-                <div class="weather-details">
-                    <div class="detail-item"><div class="value">${Math.round(feelsLike)}&deg;</div><div class="label">Feels Like</div></div>
-                    <div class="detail-item"><div class="value">${Math.round(wind)} km/h</div><div class="label">Wind</div></div>
-                    <div class="detail-item"><div class="value">${data.daily.temperature_2m_max[0].toFixed(1)}&deg;</div><div class="label">High</div></div>
-                </div>`;
-            document.getElementById('searchBtn').addEventListener('click', () => this.handleSearch());
-            document.getElementById('cityInput').addEventListener('keypress', (e) => e.key === 'Enter' && this.handleSearch());
-        },
-        getWeatherInfo(code) {
-             const descriptions = {
-                0: { desc: "Clear sky", icon: "https://i.imgur.com/f8a0p6N.png", theme: "sunny" }, // sunny
-                1: { desc: "Mainly clear", icon: "https://i.imgur.com/f8a0p6N.png", theme: "sunny" }, // sunny
-                2: { desc: "Partly cloudy", icon: "https://i.imgur.com/bZz6W8A.png", theme: "cloudy" }, // partly cloudy
-                3: { desc: "Overcast", icon: "https://i.imgur.com/bZz6W8A.png", theme: "cloudy" }, // cloudy
-                45: { desc: "Fog", icon: "https://i.imgur.com/O6H5p5w.png", theme: "cloudy" }, // fog
-                48: { desc: "Rime fog", icon: "https://i.imgur.com/O6H5p5w.png", theme: "cloudy" }, // fog
-                61: { desc: "Slight rain", icon: "https://i.imgur.com/xG1H9d8.png", theme: "rainy" }, // rainy
-                63: { desc: "Moderate rain", icon: "https://i.imgur.com/xG1H9d8.png", theme: "rainy" }, // rainy
-                65: { desc: "Heavy rain", icon: "https://i.imgur.com/xG1H9d8.png", theme: "rainy" }, // rainy
-                80: { desc: "Slight showers", icon: "https://i.imgur.com/xG1H9d8.png", theme: "rainy" }, // rainy
-             };
-            return descriptions[code] || { desc: "Cloudy", icon: "https://i.imgur.com/bZz6W8A.png", theme: "cloudy" };
+        // digit animation: add tick when second changed
+        if (this.state.prevSecond === null || this.state.prevSecond !== seconds) {
+            // update with span that has tick animation class
+            this.elements.timeDisplay.innerHTML = `${hh}:${mm}:<span class="digit-tick">${ss}</span>`;
+            // remove tick class after animation ends
+            setTimeout(() => {
+                const sp = this.elements.timeDisplay.querySelector('span');
+                if (sp) sp.classList.remove('digit-tick');
+            }, 500);
+            this.state.prevSecond = seconds;
+        } else {
+            // no change → keep display as-is
+            this.elements.timeDisplay.innerHTML = `${hh}:${mm}:${ss}`;
         }
-    };
 
-    </script>
+        const progress = this.state.totalSeconds > 0 ? (this.state.remainingSeconds / this.state.totalSeconds) : 0;
+        const offset = this.circumference * (1 - progress);
+        this.elements.progressCircle.style.strokeDashoffset = offset;
+    },
+    updateUI() {
+        if (this.state.isRunning) {
+            this.elements.startPauseBtn.textContent = 'Pause';
+            this.elements.startPauseBtn.className = 'btn btn-pause';
+            this.elements.inputsContainer.classList.add('hidden');
+        } else {
+            this.elements.startPauseBtn.textContent = 'Start';
+            this.elements.startPauseBtn.className = 'btn btn-start';
+            this.elements.inputsContainer.classList.remove('hidden');
+        }
+    }
+};
+
+/* ---------- WEATHER APP (fixed Open-Meteo usage) ---------- */
+const weatherApp = {
+    isInitialized: false,
+    elements: {},
+    initialize() {
+        this.isInitialized = true;
+        const container = views['landscape-secondary'];
+        container.innerHTML = `<div class="weather-container default" id="weatherComponentContainer"></div>`;
+        this.elements.container = document.getElementById('weatherComponentContainer');
+        this.elements.container.innerHTML = `
+            <div class="search-bar">
+                <input type="text" id="cityInput" placeholder="Enter city...">
+                <button id="searchBtn">🔍</button>
+            </div>
+            <div class="message" id="messageArea">Loading...</div>
+        `;
+        this.elements.searchBtn = document.getElementById('searchBtn');
+        this.elements.cityInput = document.getElementById('cityInput');
+        this.elements.messageArea = document.getElementById('messageArea');
+
+        this.elements.searchBtn.addEventListener('click', () => this.handleSearch());
+        this.elements.cityInput.addEventListener('keypress', (e) => e.key === 'Enter' && this.handleSearch());
+
+        // try location first
+        if (navigator.geolocation) {
+            this.elements.messageArea.textContent = 'Getting location...';
+            navigator.geolocation.getCurrentPosition(
+                (pos) => this.fetchWeather(pos.coords.latitude, pos.coords.longitude, 'Your Location'),
+                () => this.elements.messageArea.textContent = 'Location denied. Please search.'
+            );
+        } else {
+            this.elements.messageArea.textContent = 'Geolocation not supported.';
+        }
+    },
+    async handleSearch() {
+        const city = (this.elements.cityInput.value || '').trim();
+        if (!city) return;
+        this.elements.messageArea.innerHTML = '<div class="loader"></div>';
+        const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`;
+        try {
+            const res = await fetch(geoUrl);
+            const data = await res.json();
+            if (!data.results || data.results.length === 0) throw new Error('City not found');
+            const { latitude, longitude, name, country } = data.results[0];
+            this.fetchWeather(latitude, longitude, `${name}, ${country}`);
+        } catch (e) {
+            this.elements.messageArea.textContent = 'City not found.';
+        }
+    },
+    async fetchWeather(lat, lon, name = null) {
+        // Open-Meteo correct call
+        const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=temperature_2m_max&timezone=auto`;
+        try {
+            this.elements.messageArea.innerHTML = '<div class="loader"></div>';
+            const res = await fetch(apiUrl);
+            const data = await res.json();
+            // data.current_weather contains {temperature, windspeed, weathercode}
+            const current = data.current_weather;
+            if (!current) throw new Error('No current weather data');
+            if (!name) name = 'Your Location';
+            this.displayWeather(data, name);
+        } catch (e) {
+            console.error(e);
+            this.elements.container.innerHTML = '<div class="message">Could not fetch weather.</div>';
+        }
+    },
+    displayWeather(data, name) {
+        // safe guards and mapping
+        const current = data.current_weather || {};
+        const temp = current.temperature ?? null;
+        const wind = current.windspeed ?? null;
+        const code = current.weathercode ?? null;
+        const high = (data.daily && data.daily.temperature_2m_max && data.daily.temperature_2m_max[0] !== undefined) ? data.daily.temperature_2m_max[0] : null;
+
+        const info = this.getWeatherInfo(code);
+        this.elements.container.className = `weather-container ${info.theme || 'default'}`;
+        // render
+        this.elements.container.innerHTML = `
+            <div class="search-bar"><input type="text" id="cityInput" placeholder="Another city..."><button id="searchBtn">🔍</button></div>
+            <div class="weather-main">
+                <div class="location">${name}</div>
+                <img src="${info.icon}" alt="${info.desc}" class="weather-icon">
+                <h1 class="temperature">${temp !== null ? Math.round(temp) : '--'}&deg;</h1>
+                <p class="weather-description">${info.desc}</p>
+            </div>
+            <div class="weather-details">
+                <div class="detail-item"><div class="value">${feelsLikeSafe(data) }&deg;</div><div class="label">Feels Like</div></div>
+                <div class="detail-item"><div class="value">${wind !== null ? Math.round(wind) : '--'} km/h</div><div class="label">Wind</div></div>
+                <div class="detail-item"><div class="value">${high !== null ? Number(high).toFixed(1) : '--'}&deg;</div><div class="label">High</div></div>
+            </div>
+        `;
+        // rebind new inputs and buttons
+        this.elements.searchBtn = this.elements.container.querySelector('#searchBtn');
+        this.elements.cityInput = this.elements.container.querySelector('#cityInput');
+        this.elements.searchBtn.addEventListener('click', () => this.handleSearch());
+        this.elements.cityInput.addEventListener('keypress', (e) => e.key === 'Enter' && this.handleSearch());
+
+        function feelsLikeSafe(dataObj) {
+            // open-meteo may not provide apparent temperature; use temperature as fallback
+            const cur = dataObj.current_weather || {};
+            return cur.temperature ? Math.round(cur.temperature) : '--';
+        }
+    },
+    getWeatherInfo(code) {
+        const descriptions = {
+            0: { desc: "Clear sky", icon: "https://i.imgur.com/f8a0p6N.png", theme: "sunny" },
+            1: { desc: "Mainly clear", icon: "https://i.imgur.com/f8a0p6N.png", theme: "sunny" },
+            2: { desc: "Partly cloudy", icon: "https://i.imgur.com/bZz6W8A.png", theme: "cloudy" },
+            3: { desc: "Overcast", icon: "https://i.imgur.com/bZz6W8A.png", theme: "cloudy" },
+            45: { desc: "Fog", icon: "https://i.imgur.com/O6H5p5w.png", theme: "cloudy" },
+            48: { desc: "Rime fog", icon: "https://i.imgur.com/O6H5p5w.png", theme: "cloudy" },
+            61: { desc: "Slight rain", icon: "https://i.imgur.com/xG1H9d8.png", theme: "rainy" },
+            63: { desc: "Moderate rain", icon: "https://i.imgur.com/xG1H9d8.png", theme: "rainy" },
+            65: { desc: "Heavy rain", icon: "https://i.imgur.com/xG1H9d8.png", theme: "rainy" },
+            80: { desc: "Slight showers", icon: "https://i.imgur.com/xG1H9d8.png", theme: "rainy" },
+        };
+        return descriptions[code] || { desc: "Cloudy", icon: "https://i.imgur.com/bZz6W8A.png", theme: "cloudy" };
+    }
+};
+
+/* ---------- Initialize listeners ---------- */
+startOrientationListeners();
+
+/* Set a sensible default view if nothing triggers */
+switchView('portrait-primary');
+
+</script>
 </body>
 </html>
