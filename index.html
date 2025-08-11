@@ -144,7 +144,7 @@ function startOrientationListeners() {
     // DeviceOrientation with permission flow
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         // keep permissionButton visible to prompt user
-        permissionButton.style.display = '';
+        permissionButton.style.display = 'block';
         permissionButton.addEventListener('click', () => {
             DeviceOrientationEvent.requestPermission().then(p => {
                 if (p === 'granted') {
