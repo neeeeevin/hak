@@ -180,8 +180,7 @@
 <script>
 /*
   Orientation-first app main JS
-  - This version uses a debounced deviceorientation listener for stability.
-  - It avoids fast, twitchy switching on minor phone shakes.
+  - This version uses a hybrid approach for stable orientation detection.
 */
 
 /* ---------- Configuration ---------- */
@@ -239,7 +238,7 @@ let timerInterval=null, timerEndTs=null; // timer
 
 /* ---------- Utility: show/hide features ---------- */
 function showFeatureFor(orientation) {
-  if (!orientation) return;
+  if (!orientation || orientation === currentOrientation) return;
   currentOrientation = orientation;
   orientationLabel.textContent = orientation;
   orientationIndicator.textContent = orientation;
@@ -416,44 +415,57 @@ function flashScreen(text, ms=1500){
   setTimeout(()=> overlay.remove(), ms);
 }
 
-/* ---------- NEW: STABLE ORIENTATION LOGIC ---------- */
-let orientationTimeout = null;
-const DEBOUNCE_DELAY = 400; // 400ms delay. Increase if still too sensitive.
+/* ---------- NEW, STABLE ORIENTATION LOGIC (Your Suggested Approach) ---------- */
+function getOrientationState() {
+    const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+    let orientation = "upright"; // Default fallback
 
-function deviceOrientationHandler(e){
-    clearTimeout(orientationTimeout);
-
-    orientationTimeout = setTimeout(() => {
-        const beta = e.beta; // front-back tilt
-        const gamma = e.gamma; // left-right tilt
-        let newOrientation = null;
-
-        const landscapeThreshold = 45;
-        const portraitThreshold = 45;
-
-        if (gamma > landscapeThreshold) {
-            newOrientation = 'landscape-right';
-        } else if (gamma < -landscapeThreshold) {
-            newOrientation = 'landscape-left';
-        } else if (beta > portraitThreshold && beta < 135) {
-            newOrientation = 'upright';
-        } else if (beta < -portraitThreshold && beta > -135) {
-            newOrientation = 'upside-down';
+    if (isPortrait) {
+        // Use the state from our device orientation handler to distinguish up/down
+        orientation = (window._portraitUD === "upside-down") ? "upside-down" : "upright";
+    } else { // Landscape
+        // Use the legacy window.orientation to distinguish left/right
+        if (typeof window.orientation !== 'undefined') {
+            orientation = (window.orientation === 90) ? "landscape-right" : "landscape-left";
+        } else {
+            orientation = "landscape-right"; // Default landscape
         }
-
-        if (newOrientation && newOrientation !== currentOrientation) {
-            showFeatureFor(newOrientation);
-        }
-    }, DEBOUNCE_DELAY);
+    }
+    return orientation;
 }
 
-/* ---------- Boot ---------- */
-async function initialize() {
-    // Default view
-    showFeatureFor('upright');
+// This handler ONLY updates the up/down state for portrait mode
+window._portraitUD = "upright"; // Initialize the global state
+function deviceOrientationHandler(e) {
+    if (window.matchMedia("(orientation: portrait)").matches) {
+        // Only check beta angle when in portrait to avoid conflicts
+        if (e.beta < -45 && e.beta > -135) {
+            window._portraitUD = "upside-down";
+        } else if (e.beta > 45 && e.beta < 135) {
+            window._portraitUD = "upright";
+        }
+        // After updating the state, re-evaluate and switch the view
+        onOrientationChange();
+    }
+}
 
+// This is our main function to switch views
+function onOrientationChange() {
+    const orientation = getOrientationState();
+    if (orientation && orientation !== currentOrientation) {
+        showFeatureFor(orientation);
+    }
+}
+
+// Initialize all listeners
+function initializeOrientation() {
+    // Listen for major orientation changes
+    window.addEventListener("orientationchange", onOrientationChange);
+    window.matchMedia("(orientation: portrait)").addEventListener("change", onOrientationChange);
+    
+    // Use DeviceOrientation to get detailed data for up/down detection
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        // iOS 13+ requires user permission
+        // iOS 13+ requires user permission. We can prompt with a button or on first touch.
         document.body.addEventListener('click', async () => {
             try {
                 const permission = await DeviceOrientationEvent.requestPermission();
@@ -465,14 +477,14 @@ async function initialize() {
             }
         }, { once: true });
     } else if (window.DeviceOrientationEvent) {
-        // Other browsers
         window.addEventListener('deviceorientation', deviceOrientationHandler);
-    } else {
-        orientationLabel.textContent = 'Orientation API not supported.';
     }
+
+    // Set initial state
+    onOrientationChange();
 }
 
-initialize();
+initializeOrientation();
 
 </script>
 </body>
