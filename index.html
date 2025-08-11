@@ -4,11 +4,6 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1, user-scalable=no" />
 <title>Prompt This Into Existence — Orientation Time Utilities</title>
-
-<!-- PWA Manifest hint (optional file to add later) -->
-<link rel="manifest" href="/manifest.json" />
-
-<!-- Basic styling + mobile-first UI -->
 <style>
   :root{
     --bg:#0f1724; --card:#0b1220; --accent:#7c3aed; --muted:#9aa4b2; --glass: rgba(255,255,255,0.04);
@@ -42,7 +37,6 @@
   .big-state{font-size:14px; font-weight:700}
   .small{font-size:12px;color:var(--muted)}
 
-  /* containers for components */
   .stage{position:relative; height:380px; border-radius:12px; overflow:hidden; background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); display:flex; align-items:center; justify-content:center;}
   .feature{
     position:absolute; inset:0; padding:18px; display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -53,23 +47,19 @@
   }
   .feature.active{ opacity:1; transform:none; pointer-events:auto; }
 
-  /* Alarm style */
   .alarm-clock .time{font-size:56px; font-weight:700; letter-spacing:1px; margin-bottom:12px;}
   .alarm-controls{display:flex; gap:8px; align-items:center;}
   input[type="time"]{font-size:16px;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04); background:var(--glass); color:inherit;}
 
-  /* Stopwatch */
   .stopwatch .display{font-size:48px; font-weight:700; letter-spacing:0.5px; margin-bottom:14px;}
   .btn-row{display:flex; gap:10px;}
   button{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.04); padding:10px 14px;border-radius:10px;color:inherit;font-weight:600; cursor: pointer;}
   button.primary{background:linear-gradient(90deg,var(--accent),#06b6d4); color:#062024; border:none; box-shadow:0 6px 18px rgba(12,28,52,0.4);}
   .danger{background:linear-gradient(90deg,var(--danger),#ff7a7a); color:white; border:none;}
 
-  /* Timer */
   .timer .inputs{display:flex; gap:8px; margin-bottom:12px;}
   .number-input{width:110px;text-align:center;font-size:22px;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04); background:var(--glass);}
 
-  /* Weather */
   .weather .big-temp{font-size:56px;font-weight:800;margin-bottom:6px;}
   .weather .cond{font-size:16px;color:var(--muted); margin-bottom:12px;}
   .weather .meta{font-size:13px;color:var(--muted);}
@@ -79,7 +69,6 @@
   .chip{font-size:12px;background:rgba(255,255,255,0.02);padding:8px;border-radius:10px;}
   .hint{font-size:12px;color:var(--muted);}
 
-  /* responsive tiny touches */
   @media (max-width:420px){
     .alarm-clock .time{font-size:46px}
     .weather .big-temp{font-size:48px}
@@ -108,10 +97,6 @@
       </div>
 
       <div class="stage" id="stage">
-        <!-- Permission Button -->
-        <button id="permissionButton" class="primary" style="display: none; padding: 15px 25px; font-size: 16px;">Enable Orientation Sensors</button>
-
-        <!-- ALARM (Portrait Upright) -->
         <section class="feature alarm-clock" id="alarm" aria-hidden="true">
           <div style="text-align:center">
             <div class="time" id="alarmTimeDisplay">--:--:--</div>
@@ -125,7 +110,6 @@
           </div>
         </section>
 
-        <!-- STOPWATCH (Landscape Right, assumed primary) -->
         <section class="feature stopwatch" id="stopwatch" aria-hidden="true">
           <div style="text-align:center">
             <div class="display" id="swDisplay">00:00:00</div>
@@ -138,7 +122,6 @@
           </div>
         </section>
 
-        <!-- TIMER (Portrait Upside-down) -->
         <section class="feature timer" id="timer" aria-hidden="true">
           <div style="text-align:center">
             <div class="display" id="timerDisplay">00:00</div>
@@ -155,7 +138,6 @@
           </div>
         </section>
 
-        <!-- WEATHER (Landscape Left, assumed secondary) -->
         <section class="feature weather" id="weather" aria-hidden="true">
           <div style="text-align:center">
             <div class="big-temp" id="weatherTemp">--°</div>
@@ -177,23 +159,16 @@
     </footer>
   </div>
 
-<!-- Audio cues (base64 tiny beep) -->
 <audio id="alarmSound" src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAA" preload="auto"></audio>
 
 <script>
-/*
-  Orientation-first app main JS
-  - This version uses a debounced deviceorientation listener for stability.
-*/
-
 /* ---------- Configuration ---------- */
 const OPENWEATHER_API_KEY = 'YOUR_OPENWEATHER_API_KEY'; // <<--- INSERT your API key here
-const WEATHER_UNITS = 'metric'; // or 'imperial'
+const WEATHER_UNITS = 'metric';
 
 /* ---------- UI refs ---------- */
 const orientationLabel = document.getElementById('orientationLabel');
 const orientationIndicator = document.getElementById('orientationIndicator');
-const permissionButton = document.getElementById('permissionButton');
 const alarmDiv = document.getElementById('alarm');
 const stopwatchDiv = document.getElementById('stopwatch');
 const timerDiv = document.getElementById('timer');
@@ -225,7 +200,14 @@ const weatherMeta = document.getElementById('weatherMeta');
 const refreshWeather = document.getElementById('refreshWeather');
 const locWeather = document.getElementById('locWeather');
 
-const orientationEls = {
+const orientationMap = {
+  'portrait-primary': 'upright',
+  'portrait-secondary': 'upside-down',
+  'landscape-primary': 'landscape-right',
+  'landscape-secondary': 'landscape-left'
+};
+
+const featureMap = {
   'upright': alarmDiv,
   'upside-down': timerDiv,
   'landscape-right': stopwatchDiv,
@@ -233,22 +215,21 @@ const orientationEls = {
 };
 
 /* ---------- App state ---------- */
-let currentOrientation = null;
+let currentMode = null;
 let alarmTimeStr = localStorage.getItem('pt_alarm_time') || null;
 if(alarmTimeStr) { savedAlarmElem.textContent = alarmTimeStr; alarmInput.value = alarmTimeStr; }
-
-let swInterval=null, swStartTs=null, swAccum=0; // stopwatch
-let timerInterval=null, timerEndTs=null; // timer
+let swInterval=null, swStartTs=null, swAccum=0;
+let timerInterval=null, timerEndTs=null;
 
 /* ---------- Utility: show/hide features ---------- */
-function showFeatureFor(orientation) {
-  if (!orientation || orientation === currentOrientation) return;
-  currentOrientation = orientation;
-  orientationLabel.textContent = orientation;
-  orientationIndicator.textContent = orientation;
+function showFeatureFor(mode) {
+  if (!mode || mode === currentMode) return;
+  currentMode = mode;
+  orientationLabel.textContent = mode;
+  orientationIndicator.textContent = mode;
   
-  Object.values(orientationEls).forEach(el => { el.classList.remove('active'); el.setAttribute('aria-hidden', 'true'); });
-  const el = orientationEls[orientation];
+  Object.values(featureMap).forEach(el => { el.classList.remove('active'); el.setAttribute('aria-hidden', 'true'); });
+  const el = featureMap[mode];
   if(el){
     el.classList.add('active');
     el.setAttribute('aria-hidden', 'false');
@@ -257,12 +238,8 @@ function showFeatureFor(orientation) {
 }
 
 /* ---------- Alarm implementation ---------- */
-function formatTime(date) {
-  return date.toLocaleTimeString([], { hour12:false });
-}
-function updateClockDisplay(){
-  alarmTimeDisplay.textContent = formatTime(new Date());
-}
+function formatTime(date) { return date.toLocaleTimeString([], { hour12:false }); }
+function updateClockDisplay(){ alarmTimeDisplay.textContent = formatTime(new Date()); }
 setInterval(updateClockDisplay, 1000);
 updateClockDisplay();
 
@@ -283,34 +260,25 @@ clearAlarmBtn.addEventListener('click', () => {
 
 setInterval(() => {
   if(!alarmTimeStr) return;
-  const now = formatTime(new Date());
-  if(now === alarmTimeStr){
-    triggerAlarm();
-  }
+  if(formatTime(new Date()) === alarmTimeStr){ triggerAlarm(); }
 }, 1000);
 
 function triggerAlarm(){
   flashScreen('Alarm!', 2200);
-  if(alarmSound){
-    try{ alarmSound.play(); } catch(e){}
-  }
+  if(alarmSound) try{ alarmSound.play(); } catch(e){}
   if(navigator.vibrate) navigator.vibrate([200,80,150]);
 }
 
 /* ---------- Stopwatch implementation ---------- */
 function formatElapsed(ms) {
-  const cs = Math.floor(ms/10)%100;
-  const s = Math.floor(ms/1000)%60;
-  const m = Math.floor(ms/60000);
+  const cs = Math.floor(ms/10)%100, s = Math.floor(ms/1000)%60, m = Math.floor(ms/60000);
   return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}:${String(cs).padStart(2,'0')}`;
 }
 swStart.addEventListener('click', () => {
   if(swInterval) return;
   swStartTs = Date.now();
   swInterval = setInterval(()=> {
-    const now = Date.now();
-    const elapsed = swAccum + (now - swStartTs);
-    swDisplay.textContent = formatElapsed(elapsed);
+    swDisplay.textContent = formatElapsed(swAccum + (Date.now() - swStartTs));
   }, 50);
 });
 swStop.addEventListener('click', () => {
@@ -327,13 +295,11 @@ swReset.addEventListener('click', () => {
 /* ---------- Timer implementation ---------- */
 function formatRemaining(ms){
   if(ms<=0) return '00:00';
-  const s = Math.floor(ms/1000)%60;
-  const m = Math.floor(ms/60000);
+  const s = Math.floor(ms/1000)%60, m = Math.floor(ms/60000);
   return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 }
 tStart.addEventListener('click', () => {
-  const m = Number(timerMinutes.value) || 0;
-  const s = Number(timerSeconds.value) || 0;
+  const m = Number(timerMinutes.value) || 0, s = Number(timerSeconds.value) || 0;
   const totalMs = (m*60 + s)*1000;
   if(totalMs<=0) { alert('Enter a duration'); return; }
   timerEndTs = Date.now() + totalMs;
@@ -349,9 +315,7 @@ tStart.addEventListener('click', () => {
     }
   }, 250);
 });
-tStop.addEventListener('click', () => {
-  if(timerInterval){ clearInterval(timerInterval); timerInterval=null; }
-});
+tStop.addEventListener('click', () => { if(timerInterval){ clearInterval(timerInterval); timerInterval=null; } });
 tReset.addEventListener('click', () => {
   if(timerInterval){ clearInterval(timerInterval); timerInterval=null; }
   timerDisplay.textContent='00:00';
@@ -360,8 +324,7 @@ tReset.addEventListener('click', () => {
 /* ---------- Weather implementation ---------- */
 async function fetchWeatherByCoords(lat, lon) {
   if(!OPENWEATHER_API_KEY || OPENWEATHER_API_KEY==='YOUR_OPENWEATHER_API_KEY'){
-    weatherCond.textContent = 'Add API key in code';
-    return;
+    weatherCond.textContent = 'Add API key in code'; return;
   }
   weatherMeta.textContent = 'Fetching…';
   try{
@@ -375,8 +338,7 @@ async function fetchWeatherByCoords(lat, lon) {
     weatherMeta.textContent = `${j.name} • Humidity ${j.main.humidity}%`;
     flashUI('Weather updated');
   }catch(e){
-    weatherMeta.textContent = 'Weather unavailable';
-    console.error(e);
+    weatherMeta.textContent = 'Weather unavailable'; console.error(e);
   }
 }
 refreshWeather.addEventListener('click', () => {
@@ -392,21 +354,16 @@ locWeather.addEventListener('click', fetchLocationAndWeather);
 function fetchLocationAndWeather(){
   if(!navigator.geolocation){ weatherMeta.textContent='Geolocation unsupported'; return; }
   navigator.geolocation.getCurrentPosition((pos)=>{
-    const lat = pos.coords.latitude, lon = pos.coords.longitude;
+    const {latitude: lat, longitude: lon} = pos.coords;
     localStorage.setItem('pt_coords', JSON.stringify({lat,lon}));
     fetchWeatherByCoords(lat, lon);
-  }, (err)=>{
-    weatherMeta.textContent = 'Location permission denied';
-  }, {enableHighAccuracy:false, timeout:8000});
+  }, ()=>{ weatherMeta.textContent = 'Location permission denied'; }, {timeout:8000});
 }
 
 /* ---------- UI helpers ---------- */
 function flashUI(text){
-  const prev = document.getElementById('tempToast');
-  if(prev) prev.remove();
   const t = document.createElement('div');
-  t.id='tempToast';
-  t.style.cssText = 'position:absolute; left:50%; top:12%; transform:translateX(-50%); background:linear-gradient(90deg,var(--accent),#06b6d4); color:#042226; padding:10px 16px; border-radius:10px; font-weight:700; box-shadow:0 8px 30px rgba(2,6,23,0.6);';
+  t.style.cssText = 'position:absolute; left:50%; top:12%; transform:translateX(-50%); background:linear-gradient(90deg,var(--accent),#06b6d4); color:#042226; padding:10px 16px; border-radius:10px; font-weight:700; box-shadow:0 8px 30px rgba(2,6,23,0.6); z-index: 100;';
   t.innerText = text;
   stage.appendChild(t);
   setTimeout(()=> t.remove(), 1700);
@@ -419,73 +376,36 @@ function flashScreen(text, ms=1500){
   setTimeout(()=> overlay.remove(), ms);
 }
 
-/* ---------- NEW, STABLE ORIENTATION LOGIC (Your Logic + Debounce) ---------- */
-let orientationTimeout = null;
-const DEBOUNCE_DELAY = 300; // Delay in milliseconds
-
-function getOrientationState() {
-    const isPortrait = window.matchMedia("(orientation: portrait)").matches;
-    let orientation = "upright";
-
-    if (isPortrait) {
-        orientation = (window._portraitUD === "upside-down") ? "upside-down" : "upright";
-    } else { // Landscape
-        if (typeof window.orientation !== 'undefined') {
-            orientation = (window.orientation === 90) ? "landscape-right" : "landscape-left";
-        } else {
-            orientation = "landscape-right";
-        }
+/* ---------- NEW, STABLE ORIENTATION LOGIC ---------- */
+function handleOrientationChange() {
+    const type = screen.orientation.type;
+    const mode = orientationMap[type];
+    if (mode) {
+        showFeatureFor(mode);
+    } else {
+        // Fallback for older browsers or unexpected values
+        const isPortrait = window.innerHeight > window.innerWidth;
+        showFeatureFor(isPortrait ? 'upright' : 'landscape-right');
     }
-    return orientation;
-}
-
-window._portraitUD = "upright";
-function deviceOrientationHandler(e) {
-    if (window.matchMedia("(orientation: portrait)").matches) {
-        if (e.beta < -45 && e.beta > -135) {
-            window._portraitUD = "upside-down";
-        } else if (e.beta > 45 && e.beta < 135) {
-            window._portraitUD = "upright";
-        }
-    }
-}
-
-function onOrientationChange() {
-    clearTimeout(orientationTimeout);
-    orientationTimeout = setTimeout(() => {
-        const orientation = getOrientationState();
-        if (orientation && orientation !== currentOrientation) {
-            showFeatureFor(orientation);
-        }
-    }, DEBOUNCE_DELAY);
 }
 
 function initializeOrientation() {
-    window.addEventListener("orientationchange", onOrientationChange);
-    window.matchMedia("(orientation: portrait)").addEventListener("change", onOrientationChange);
-    
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        permissionButton.style.display = 'block';
-        permissionButton.addEventListener('click', async () => {
-            try {
-                const permission = await DeviceOrientationEvent.requestPermission();
-                if (permission === 'granted') {
-                    window.addEventListener('deviceorientation', deviceOrientationHandler);
-                }
-                permissionButton.style.display = 'none';
-            } catch (error) {
-                console.error("DeviceOrientation permission request failed.", error);
-                permissionButton.style.display = 'none';
-            }
-        }, { once: true });
-    } else if (window.DeviceOrientationEvent) {
-        window.addEventListener('deviceorientation', deviceOrientationHandler);
+    // Check if the modern screen.orientation API is available
+    if (window.screen && window.screen.orientation) {
+        // Use the modern, stable API
+        screen.orientation.addEventListener('change', handleOrientationChange);
+        // Set the initial state
+        handleOrientationChange();
+    } else {
+        // Fallback for older devices
+        const isPortrait = window.innerHeight > window.innerWidth;
+        showFeatureFor(isPortrait ? 'upright' : 'landscape-right');
+        orientationLabel.textContent = 'Legacy Mode';
     }
-
-    onOrientationChange();
 }
 
-initializeOrientation();
+// Boot the application
+window.addEventListener('load', initializeOrientation);
 
 </script>
 </body>
