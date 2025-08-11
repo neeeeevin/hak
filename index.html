@@ -168,38 +168,18 @@
     <div class="main-container" id="mainContainer">
         <button id="permissionButton">Enable Orientation Sensors</button>
 
-        <!-- View 1: Alarm Clock -->
-        <div id="view-portrait-primary" class="app-view">
-            <div class="alarm-clock-container" id="alarmClockContainer">
-                <!-- Alarm clock content will be injected by JS -->
-            </div>
-            <div class="alarm-modal-overlay" id="alarmModal">
-                <div class="alarm-modal-content">
-                    <h2 class="alarm-modal-title">Wake Up!</h2>
-                    <button class="snooze-btn" id="snoozeBtn">Snooze (5 min)</button>
-                    <button class="dismiss-btn" id="dismissBtn">Dismiss</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- View 2: Stopwatch -->
-        <div id="view-landscape-primary" class="app-view">
-            <div class="stopwatch-container" id="stopwatchContainer">
-                <!-- Stopwatch content will be injected by JS -->
-            </div>
-        </div>
-
-        <!-- View 3: Timer -->
-        <div id="view-portrait-secondary" class="app-view">
-            <div class="timer-container" id="timerContainer">
-                <!-- Timer content will be injected by JS -->
-            </div>
-        </div>
-
-        <!-- View 4: Weather -->
-        <div id="view-landscape-secondary" class="app-view">
-            <div class="weather-container default" id="weatherContainer">
-                <!-- Weather content will be injected by JS -->
+        <!-- Views for each orientation -->
+        <div id="view-portrait-primary" class="app-view"></div>
+        <div id="view-landscape-primary" class="app-view"></div>
+        <div id="view-portrait-secondary" class="app-view"></div>
+        <div id="view-landscape-secondary" class="app-view"></div>
+        
+        <!-- Alarm Modal (Global) -->
+        <div class="alarm-modal-overlay" id="alarmModal">
+            <div class="alarm-modal-content">
+                <h2 class="alarm-modal-title">Wake Up!</h2>
+                <button class="snooze-btn" id="snoozeBtn">Snooze (5 min)</button>
+                <button class="dismiss-btn" id="dismissBtn">Dismiss</button>
             </div>
         </div>
     </div>
@@ -212,12 +192,15 @@
     const permissionButton = document.getElementById('permissionButton');
     const views = {
         'portrait-primary': document.getElementById('view-portrait-primary'),
-        'landscape-primary': document.getElementById('view-landscape-primary'),
+        'landscape-primary': document.getElementById('view-landscape-primary'), // Right
         'portrait-secondary': document.getElementById('view-portrait-secondary'),
-        'landscape-secondary': document.getElementById('view-landscape-secondary'),
+        'landscape-secondary': document.getElementById('view-landscape-secondary'), // Left
     };
-    let lastKnownOrientation = '';
-    let activeView = null;
+    let activeViewId = null;
+    
+    // --- STABILITY CHECK (DEBOUNCING) ---
+    let orientationTimeout = null;
+    const DEBOUNCE_DELAY = 400; // ms
 
     // --- 2. ORIENTATION LOGIC ---
     permissionButton.addEventListener('click', () => {
@@ -238,33 +221,44 @@
     });
 
     function handleOrientation(event) {
-        const beta = event.beta;
-        const gamma = event.gamma;
-        let currentOrientation = 'unknown';
+        // Clear any previous timeout to check for a new stable position
+        clearTimeout(orientationTimeout);
 
-        // Landscape is less ambiguous
-        if (gamma > 45) currentOrientation = 'landscape-primary'; // Right side up
-        else if (gamma < -45) currentOrientation = 'landscape-secondary'; // Left side up
-        // Portrait
-        else if (beta > 45 && beta < 135) currentOrientation = 'portrait-primary'; // Upright
-        else if (beta < -45 && beta > -135) currentOrientation = 'portrait-secondary'; // Upside down
+        orientationTimeout = setTimeout(() => {
+            const beta = event.beta;
+            const gamma = event.gamma;
+            let newOrientationId = null;
 
-        if (currentOrientation !== 'unknown' && currentOrientation !== lastKnownOrientation) {
-            switchView(currentOrientation);
-            lastKnownOrientation = currentOrientation;
-        }
+            // Define stricter angle thresholds for stability
+            const landscapeThreshold = 60;
+            const portraitThreshold = 60;
+
+            if (gamma > landscapeThreshold) newOrientationId = 'landscape-primary';
+            else if (gamma < -landscapeThreshold) newOrientationId = 'landscape-secondary';
+            else if (beta > portraitThreshold && beta < 120) newOrientationId = 'portrait-primary';
+            else if (beta < -portraitThreshold && beta > -120) newOrientationId = 'portrait-secondary';
+
+            // Switch view only if a stable orientation is detected and it's different
+            if (newOrientationId && newOrientationId !== activeViewId) {
+                switchView(newOrientationId);
+            }
+        }, DEBOUNCE_DELAY);
     }
 
-    function switchView(orientation) {
-        if (activeView) {
-            activeView.classList.remove('active');
+    function switchView(orientationId) {
+        if (activeViewId) {
+            views[activeViewId].classList.remove('active');
         }
-        activeView = views[orientation];
-        if (activeView) {
-            activeView.classList.add('active');
-            mainContainer.className = `main-container ${orientation}`;
+        
+        activeViewId = orientationId;
+        const newView = views[activeViewId];
+        
+        if (newView) {
+            newView.classList.add('active');
+            mainContainer.className = `main-container ${activeViewId}`;
+            
             // Special trigger for weather app on first view
-            if (orientation === 'landscape-secondary' && !weatherApp.isInitialized) {
+            if (activeViewId === 'landscape-secondary' && !weatherApp.isInitialized) {
                 weatherApp.initialize();
             }
         }
@@ -275,7 +269,7 @@
         alarmClockApp.initialize();
         stopwatchApp.initialize();
         timerApp.initialize();
-        // Weather is initialized on first view
+        // Weather is initialized on first view when needed
     }
 
     // --- 4. INDIVIDUAL APP MODULES ---
@@ -285,9 +279,10 @@
         elements: {},
         state: { alarms: [], ringingAlarmId: null, audioContext: null, oscillator: null, gainNode: null },
         initialize() {
-            const container = document.getElementById('alarmClockContainer');
+            const container = views['portrait-primary'];
             container.innerHTML = `
-                <div class="analog-clock">
+            <div class="alarm-clock-container">
+                <div class="analog-clock" id="alarmAnalogClock">
                     <div class="clock-center"></div><div class="clock-hand hour-hand" id="hourHand"></div>
                     <div class="clock-hand minute-hand" id="minuteHand"></div><div class="clock-hand second-hand" id="secondHand"></div>
                 </div>
@@ -295,7 +290,8 @@
                 <div class="add-alarm-form">
                     <input type="time" id="alarmTimeInput"><button class="add-alarm-btn" id="addAlarmBtn">+</button>
                 </div>
-                <div class="alarms-list-container" id="alarmsList"></div>`;
+                <div class="alarms-list-container" id="alarmsList"></div>
+            </div>`;
             
             this.elements = {
                 hourHand: document.getElementById('hourHand'), minuteHand: document.getElementById('minuteHand'),
@@ -303,7 +299,7 @@
                 alarmTimeInput: document.getElementById('alarmTimeInput'), addAlarmBtn: document.getElementById('addAlarmBtn'),
                 alarmsList: document.getElementById('alarmsList'), alarmModal: document.getElementById('alarmModal'),
                 snoozeBtn: document.getElementById('snoozeBtn'), dismissBtn: document.getElementById('dismissBtn'),
-                container: container
+                analogClock: document.getElementById('alarmAnalogClock')
             };
             
             this.state.alarms = JSON.parse(localStorage.getItem('alarms')) || [];
@@ -318,27 +314,27 @@
             this.render();
             this.setDate();
         },
-        setDate() { /* ... Logic to update clock hands and digital display ... */
+        setDate() {
             const now = new Date();
             this.elements.secondHand.style.transform = `rotate(${((now.getSeconds() / 60) * 360) + 90}deg)`;
-            this.elements.minuteHand.style.transform = `rotate(${((now.getMinutes() / 60) * 360) + 90}deg)`;
-            this.elements.hourHand.style.transform = `rotate(${((now.getHours() / 12) * 360) + 90}deg)`;
+            this.elements.minuteHand.style.transform = `rotate(${((now.getMinutes() / 60) * 360) + ((now.getSeconds()/60)*6) + 90}deg)`;
+            this.elements.hourHand.style.transform = `rotate(${((now.getHours() / 12) * 360) + ((now.getMinutes()/60)*30) + 90}deg)`;
             this.elements.digitalClock.textContent = now.toLocaleTimeString();
             this.check(now);
         },
-        add() { /* ... Logic to add an alarm ... */
+        add() {
             const time = this.elements.alarmTimeInput.value;
             if (!time) return;
             this.state.alarms.push({ id: Date.now(), time: time, triggered: false });
             localStorage.setItem('alarms', JSON.stringify(this.state.alarms));
             this.render();
         },
-        delete(id) { /* ... Logic to delete an alarm ... */
+        delete(id) {
             this.state.alarms = this.state.alarms.filter(a => a.id !== id);
             localStorage.setItem('alarms', JSON.stringify(this.state.alarms));
             this.render();
         },
-        render() { /* ... Logic to display alarms ... */
+        render() {
             this.elements.alarmsList.innerHTML = '';
             this.state.alarms.forEach(alarm => {
                 const item = document.createElement('div');
@@ -347,32 +343,58 @@
                 this.elements.alarmsList.appendChild(item);
             });
         },
-        check(now) { /* ... Logic to check if an alarm should ring ... */
+        check(now) {
             const currentTime = now.toTimeString().slice(0, 5);
+            if (currentTime === "00:00") {
+                this.state.alarms.forEach(a => a.triggered = false);
+            }
             this.state.alarms.forEach(alarm => {
                 if (alarm.time === currentTime && !alarm.triggered) {
                     alarm.triggered = true;
+                    localStorage.setItem('alarms', JSON.stringify(this.state.alarms));
                     this.ring(alarm.id);
                 }
             });
         },
-        ring(id) { /* ... Logic for when an alarm rings ... */
+        startSound() {
+            if (!this.state.audioContext) this.state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            if (this.state.oscillator) this.state.oscillator.stop();
+
+            this.state.oscillator = this.state.audioContext.createOscillator();
+            this.state.gainNode = this.state.audioContext.createGain();
+            this.state.oscillator.connect(this.state.gainNode);
+            this.state.gainNode.connect(this.state.audioContext.destination);
+            this.state.oscillator.type = 'triangle';
+            this.state.oscillator.frequency.setValueAtTime(440, this.state.audioContext.currentTime);
+            this.state.gainNode.gain.setValueAtTime(0.01, this.state.audioContext.currentTime);
+            this.state.gainNode.gain.exponentialRampToValueAtTime(0.4, this.state.audioContext.currentTime + 12);
+            this.state.oscillator.start();
+        },
+        stopSound() {
+            if (this.state.gainNode) {
+                this.state.gainNode.gain.exponentialRampToValueAtTime(0.0001, this.state.audioContext.currentTime + 0.5);
+                this.state.oscillator.stop(this.state.audioContext.currentTime + 0.5);
+                this.state.oscillator = null;
+                this.state.gainNode = null;
+            }
+        },
+        ring(id) {
             this.state.ringingAlarmId = id;
             this.elements.alarmModal.style.display = 'flex';
-            this.elements.container.classList.add('pulsing-alert');
+            this.elements.analogClock.classList.add('pulsing-alert');
+            this.startSound();
         },
-        dismiss() { /* ... Logic to dismiss alarm ... */
+        dismiss() {
              this.elements.alarmModal.style.display = 'none';
-             this.elements.container.classList.remove('pulsing-alert');
+             this.elements.analogClock.classList.remove('pulsing-alert');
+             this.stopSound();
         },
-        snooze() { /* ... Logic to snooze alarm ... */
+        snooze() {
             this.dismiss();
             const snoozeTime = new Date(Date.now() + 5 * 60000);
             const hours = snoozeTime.getHours().toString().padStart(2, '0');
             const minutes = snoozeTime.getMinutes().toString().padStart(2, '0');
-            this.state.alarms.push({ id: Date.now(), time: `${hours}:${minutes}`, triggered: false });
-            localStorage.setItem('alarms', JSON.stringify(this.state.alarms));
-            this.render();
+            this.addAlarm({ time: `${hours}:${minutes}` });
         }
     };
 
@@ -381,15 +403,17 @@
         elements: {},
         state: { startTime: 0, elapsedTime: 0, timerInterval: null, isRunning: false, laps: [] },
         initialize() {
-            const container = document.getElementById('stopwatchContainer');
+            const container = views['landscape-primary'];
             container.innerHTML = `
+            <div class="stopwatch-container">
                 <div class="time-display" id="stopwatchTimeDisplay">00:00:000</div>
                 <div class="controls">
                     <button class="btn btn-reset" id="stopwatchResetBtn">Reset</button>
                     <button class="btn btn-start" id="stopwatchStartStopBtn">Start</button>
                 </div>
                 <div class="controls"><button class="btn btn-lap" id="stopwatchLapBtn" disabled>Lap</button></div>
-                <div class="laps-container"><ol class="laps-list" id="stopwatchLapsList"></ol></div>`;
+                <div class="laps-container"><ol class="laps-list" id="stopwatchLapsList"></ol></div>
+            </div>`;
             
             this.elements = {
                 timeDisplay: document.getElementById('stopwatchTimeDisplay'),
@@ -462,8 +486,9 @@
         elements: {},
         state: { isRunning: false, timerInterval: null, remainingSeconds: 0, totalSeconds: 0 },
         initialize() {
-            const container = document.getElementById('timerContainer');
+            const container = views['portrait-secondary'];
             container.innerHTML = `
+            <div class="timer-container" id="timerComponentContainer">
                 <div class="progress-ring">
                     <svg class="progress-ring__svg">
                         <circle class="progress-ring__circle progress-ring__background" r="90" cx="100" cy="100"></circle>
@@ -481,10 +506,11 @@
                 </div>
                 <div class="controls">
                     <button class="btn btn-reset" id="timerResetBtn">Reset</button><button class="btn btn-start" id="timerStartPauseBtn">Start</button>
-                </div>`;
+                </div>
+            </div>`;
             
             this.elements = {
-                container: container,
+                container: document.getElementById('timerComponentContainer'),
                 timeDisplay: document.getElementById('timerTimeDisplay'),
                 progressCircle: document.getElementById('timerProgressCircle'),
                 inputsContainer: document.getElementById('timerInputsContainer'),
@@ -508,7 +534,7 @@
             this.updateUI();
         },
         start() {
-            this.setFromInputs();
+            if(!this.state.isRunning) this.setFromInputs();
             if (this.state.remainingSeconds <= 0) return;
             this.state.isRunning = true;
             this.state.timerInterval = setInterval(() => this.update(), 1000);
@@ -555,7 +581,11 @@
             const h = Math.floor(this.state.remainingSeconds / 3600).toString().padStart(2, '0');
             const m = Math.floor((this.state.remainingSeconds % 3600) / 60).toString().padStart(2, '0');
             const s = (this.state.remainingSeconds % 60).toString().padStart(2, '0');
+            const oldSeconds = this.elements.timeDisplay.textContent.slice(-2);
             this.elements.timeDisplay.innerHTML = `${h}:${m}:<span class="digit-tick">${s}</span>`;
+            if (s === oldSeconds) {
+                 this.elements.timeDisplay.querySelector('span').classList.remove('digit-tick');
+            }
             const progress = this.state.totalSeconds > 0 ? (this.state.remainingSeconds / this.state.totalSeconds) : 0;
             this.elements.progressCircle.style.strokeDashoffset = this.circumference * (1 - progress);
         },
@@ -575,9 +605,12 @@
     // --- WEATHER APP ---
     const weatherApp = {
         isInitialized: false,
-        elements: { container: document.getElementById('weatherContainer') },
+        elements: {},
         initialize() {
             this.isInitialized = true;
+            const container = views['landscape-secondary'];
+            container.innerHTML = `<div class="weather-container default" id="weatherComponentContainer"></div>`;
+            this.elements.container = document.getElementById('weatherComponentContainer');
             this.elements.container.innerHTML = `<div class="search-bar"><input type="text" id="cityInput" placeholder="Enter city..."><button id="searchBtn">🔍</button></div><div class="message" id="messageArea"></div>`;
             this.elements.searchBtn = document.getElementById('searchBtn');
             this.elements.cityInput = document.getElementById('cityInput');
@@ -635,7 +668,7 @@
                 <div class="search-bar"><input type="text" id="cityInput" placeholder="Another city..."><button id="searchBtn">🔍</button></div>
                 <div class="weather-main">
                     <div class="location">${name}</div>
-                    <img src="${info.icon}" class="weather-icon">
+                    <img src="${info.icon}" alt="${info.desc}" class="weather-icon">
                     <h1 class="temperature">${Math.round(temp)}&deg;</h1>
                     <p class="weather-description">${info.desc}</p>
                 </div>
@@ -649,13 +682,18 @@
         },
         getWeatherInfo(code) {
              const descriptions = {
-                0: { desc: "Clear sky", icon: "https://placehold.co/120x120/FFD700/000000?text=☀️", theme: "sunny" },
-                1: { desc: "Mainly clear", icon: "https://placehold.co/120x120/FFD700/000000?text=🌤️", theme: "sunny" },
-                2: { desc: "Partly cloudy", icon: "https://placehold.co/120x120/B0C4DE/000000?text=🌥️", theme: "cloudy" },
-                3: { desc: "Overcast", icon: "https://placehold.co/120x120/778899/FFFFFF?text=☁️", theme: "cloudy" },
-                61: { desc: "Slight rain", icon: "https://placehold.co/120x120/4682B4/FFFFFF?text=🌧️", theme: "rainy" },
-            };
-            return descriptions[code] || { desc: "Cloudy", icon: "https://placehold.co/120x120/778899/FFFFFF?text=☁️", theme: "cloudy" };
+                0: { desc: "Clear sky", icon: "https://i.imgur.com/f8a0p6N.png", theme: "sunny" }, // sunny
+                1: { desc: "Mainly clear", icon: "https://i.imgur.com/f8a0p6N.png", theme: "sunny" }, // sunny
+                2: { desc: "Partly cloudy", icon: "https://i.imgur.com/bZz6W8A.png", theme: "cloudy" }, // partly cloudy
+                3: { desc: "Overcast", icon: "https://i.imgur.com/bZz6W8A.png", theme: "cloudy" }, // cloudy
+                45: { desc: "Fog", icon: "https://i.imgur.com/O6H5p5w.png", theme: "cloudy" }, // fog
+                48: { desc: "Rime fog", icon: "https://i.imgur.com/O6H5p5w.png", theme: "cloudy" }, // fog
+                61: { desc: "Slight rain", icon: "https://i.imgur.com/xG1H9d8.png", theme: "rainy" }, // rainy
+                63: { desc: "Moderate rain", icon: "https://i.imgur.com/xG1H9d8.png", theme: "rainy" }, // rainy
+                65: { desc: "Heavy rain", icon: "https://i.imgur.com/xG1H9d8.png", theme: "rainy" }, // rainy
+                80: { desc: "Slight showers", icon: "https://i.imgur.com/xG1H9d8.png", theme: "rainy" }, // rainy
+             };
+            return descriptions[code] || { desc: "Cloudy", icon: "https://i.imgur.com/bZz6W8A.png", theme: "cloudy" };
         }
     };
 
